@@ -1,0 +1,16 @@
+# MCP Tutorial Requirements
+
+# MCP SDK
+mcp>=1.0.0
+
+# OpenAI API
+openai>=1.0.0
+
+# Jupyter compatibility - allows nested event loops
+nest_asyncio>=1.5.0
+
+# Async support
+asyncio-contextmanager>=1.0.0
+
+# Type hints support
+typing-extensions>=4.0.0
