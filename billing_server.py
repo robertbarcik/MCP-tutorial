@@ -11,6 +11,22 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
 
+def make_error(message, *, reason=None, hints=None, retryable=False, follow_up_tools=None, **extra):
+    """Standardised error payload for LLM-friendly responses."""
+    payload = {"error": message}
+    if reason:
+        payload["reason"] = reason
+    if hints:
+        payload["suggested_actions"] = hints
+    payload["retryable"] = retryable
+    if follow_up_tools:
+        payload["follow_up_tools"] = follow_up_tools
+    for key, value in extra.items():
+        if value is not None:
+            payload[key] = value
+    return payload
+
+
 # Sample invoice data
 INVOICES = [
     {
@@ -255,17 +271,36 @@ def get_invoice(invoice_id=None, customer_id=None):
     if invoice_id:
         invoice = next((inv for inv in INVOICES if inv["invoice_id"] == invoice_id), None)
         if not invoice:
-            return {"error": f"Invoice {invoice_id} not found", "invoice_id": invoice_id}
-        else:
-            result = invoice.copy()
-            result["is_overdue"] = is_overdue(invoice)
-            result["days_overdue"] = calculate_days_overdue(invoice)
-            return result
+            return make_error(
+                f"Invoice {invoice_id} not found",
+                reason="The provided invoice_id does not exist in the billing dataset.",
+                hints=[
+                    "Call calculate_outstanding_balance to review invoices by customer.",
+                    "Use get_invoice with customer_id to browse available invoices."
+                ],
+                retryable=True,
+                follow_up_tools=["calculate_outstanding_balance", "get_invoice"],
+                invoice_id=invoice_id
+            )
+        result = invoice.copy()
+        result["is_overdue"] = is_overdue(invoice)
+        result["days_overdue"] = calculate_days_overdue(invoice)
+        return result
     elif customer_id:
         customer_invoices = [inv for inv in INVOICES if inv["customer_id"] == customer_id]
         return {"customer_id": customer_id, "invoices": customer_invoices, "total_invoices": len(customer_invoices)}
     else:
-        return {"error": "Please provide either invoice_id or customer_id"}
+        return make_error(
+            "Missing invoice lookup criteria",
+            reason="Neither invoice_id nor customer_id was supplied.",
+            hints=[
+                "Provide invoice_id to retrieve a single invoice.",
+                "Provide customer_id to list all invoices for that customer."
+            ],
+            retryable=True,
+            follow_up_tools=["get_invoice"],
+            expected_arguments=["invoice_id", "customer_id"]
+        )
 
 
 def check_payment_status(invoice_id=None, customer_id=None):
@@ -273,7 +308,17 @@ def check_payment_status(invoice_id=None, customer_id=None):
     if invoice_id:
         invoice = next((inv for inv in INVOICES if inv["invoice_id"] == invoice_id), None)
         if not invoice:
-            return {"error": f"Invoice {invoice_id} not found", "invoice_id": invoice_id}
+            return make_error(
+                f"Invoice {invoice_id} not found",
+                reason="Payment details require a valid invoice_id.",
+                hints=[
+                    "List invoices by passing customer_id to get_invoice.",
+                    "Double-check the invoice_id spelling (e.g., INV-2025-001)."
+                ],
+                retryable=True,
+                follow_up_tools=["get_invoice"],
+                invoice_id=invoice_id
+            )
         return {
             "invoice_id": invoice["invoice_id"], "customer_id": invoice["customer_id"],
             "payment_status": invoice["status"], "amount": invoice["amount"], "currency": invoice["currency"],
@@ -291,7 +336,17 @@ def check_payment_status(invoice_id=None, customer_id=None):
             "overdue_invoices": [{"invoice_id": inv["invoice_id"], "amount": inv["amount"], "due_date": inv["due_date"], "days_overdue": calculate_days_overdue(inv)} for inv in overdue]
         }
     else:
-        return {"error": "Please provide either invoice_id or customer_id"}
+        return make_error(
+            "Missing payment status lookup criteria",
+            reason="No invoice_id or customer_id was provided to scope the request.",
+            hints=[
+                "Use invoice_id for a specific invoice payment status.",
+                "Use customer_id to summarise billing status across invoices."
+            ],
+            retryable=True,
+            follow_up_tools=["check_payment_status"],
+            expected_arguments=["invoice_id", "customer_id"]
+        )
 
 
 def get_billing_history(customer_id, start_date=None, end_date=None):

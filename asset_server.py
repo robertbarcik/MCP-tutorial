@@ -11,6 +11,22 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
 
+def make_error(message, *, reason=None, hints=None, retryable=False, follow_up_tools=None, **extra):
+    """Build a rich error response that remains compatible with existing clients."""
+    payload = {"error": message}
+    if reason:
+        payload["reason"] = reason
+    if hints:
+        payload["suggested_actions"] = hints
+    payload["retryable"] = retryable
+    if follow_up_tools:
+        payload["follow_up_tools"] = follow_up_tools
+    for key, value in extra.items():
+        if value is not None:
+            payload[key] = value
+    return payload
+
+
 # Sample asset data
 ASSETS = [
     {
@@ -425,7 +441,17 @@ def lookup_asset(asset_id=None, serial_number=None, hostname=None, customer_id=N
     """Look up asset(s). Can be called directly."""
     assets = search_assets(asset_id=asset_id, serial_number=serial_number, hostname=hostname, customer_id=customer_id)
     if not assets:
-        return {"error": "No assets found matching criteria", "search_criteria": {k: v for k, v in {"asset_id": asset_id, "serial_number": serial_number, "hostname": hostname, "customer_id": customer_id}.items() if v}}
+        return make_error(
+            "No assets found matching criteria",
+            reason="The identifiers did not match any assets in the dataset.",
+            hints=[
+                "Provide asset_id or serial_number for an exact match.",
+                "Use customer_id alone to list all assets for a customer."
+            ],
+            retryable=True,
+            follow_up_tools=["lookup_asset"],
+            search_criteria={k: v for k, v in {"asset_id": asset_id, "serial_number": serial_number, "hostname": hostname, "customer_id": customer_id}.items() if v}
+        )
     elif len(assets) == 1:
         result = assets[0].copy()
         if "warranty" in result:
@@ -439,7 +465,17 @@ def check_warranty(asset_id):
     """Check warranty status. Can be called directly."""
     asset = next((a for a in ASSETS if a["asset_id"] == asset_id), None)
     if not asset:
-        return {"error": f"Asset {asset_id} not found", "asset_id": asset_id}
+        return make_error(
+            f"Asset {asset_id} not found",
+            reason="Warranty information is only available for known assets.",
+            hints=[
+                "Call lookup_asset with customer_id to find valid asset IDs.",
+                "Confirm the asset_id spelling (e.g., AST-WKS-001)."
+            ],
+            retryable=True,
+            follow_up_tools=["lookup_asset"],
+            asset_id=asset_id
+        )
     warranty = asset.get("warranty", {})
     remaining = calculate_warranty_days(warranty.get("end_date"))
     return {
@@ -454,7 +490,17 @@ def get_software_licenses(asset_id=None, customer_id=None):
     if asset_id:
         asset = next((a for a in ASSETS if a["asset_id"] == asset_id), None)
         if not asset:
-            return {"error": f"Asset {asset_id} not found", "asset_id": asset_id}
+            return make_error(
+                f"Asset {asset_id} not found",
+                reason="Software license details require a valid asset_id.",
+                hints=[
+                    "Use lookup_asset to retrieve the correct asset_id.",
+                    "Search by customer_id if you do not know the asset_id."
+                ],
+                retryable=True,
+                follow_up_tools=["lookup_asset"],
+                asset_id=asset_id
+            )
         licenses = asset.get("software_licenses", [])
         return {"asset_id": asset_id, "hostname": asset["hostname"], "licenses": licenses, "total_licenses": len(licenses)}
     elif customer_id:
@@ -465,14 +511,34 @@ def get_software_licenses(asset_id=None, customer_id=None):
                 all_licenses.append({"asset_id": asset["asset_id"], "hostname": asset["hostname"], **lic})
         return {"customer_id": customer_id, "licenses": all_licenses, "total_licenses": len(all_licenses), "total_assets_with_licenses": len([a for a in customer_assets if a.get("software_licenses")])}
     else:
-        return {"error": "Please provide either asset_id or customer_id"}
+        return make_error(
+            "Missing software license lookup criteria",
+            reason="Neither asset_id nor customer_id was supplied.",
+            hints=[
+                "Provide asset_id to see licenses for a single asset.",
+                "Provide customer_id to aggregate licenses across that customer."
+            ],
+            retryable=True,
+            follow_up_tools=["get_software_licenses"],
+            expected_arguments=["asset_id", "customer_id"]
+        )
 
 
 def get_asset_history(asset_id):
     """Get asset history. Can be called directly."""
     asset = next((a for a in ASSETS if a["asset_id"] == asset_id), None)
     if not asset:
-        return {"error": f"Asset {asset_id} not found", "asset_id": asset_id}
+        return make_error(
+            f"Asset {asset_id} not found",
+            reason="History is only tracked for assets listed in the dataset.",
+            hints=[
+                "Query lookup_asset to confirm the asset exists.",
+                "Use customer_id to find assets for the relevant organisation."
+            ],
+            retryable=True,
+            follow_up_tools=["lookup_asset"],
+            asset_id=asset_id
+        )
     history = []
     history.append({"date": asset["purchase_date"], "event_type": "purchase", "description": f"Asset purchased - {asset['manufacturer']} {asset['model']}", "details": {"purchase_date": asset["purchase_date"], "location": asset["location"]}})
     warranty = asset.get("warranty", {})

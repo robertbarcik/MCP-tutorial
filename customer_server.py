@@ -10,6 +10,25 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
 
+def make_error(message, *, reason=None, hints=None, retryable=False, follow_up_tools=None, **extra):
+    """
+    Create a structured error payload that is easy for LLMs to act on while
+    remaining backwards-compatible with existing callers.
+    """
+    payload = {"error": message}
+    if reason:
+        payload["reason"] = reason
+    if hints:
+        payload["suggested_actions"] = hints
+    payload["retryable"] = retryable
+    if follow_up_tools:
+        payload["follow_up_tools"] = follow_up_tools
+    for key, value in extra.items():
+        if value is not None:
+            payload[key] = value
+    return payload
+
+
 # Sample customer data
 CUSTOMERS = [
     {
@@ -222,12 +241,18 @@ def lookup_customer(customer_id=None, email=None, company_name=None):
     customer = search_customer(customer_id=customer_id, email=email, company_name=company_name)
     
     if not customer:
-        return {
-            "error": "Customer not found",
-            "search_criteria": {k: v for k, v in {"customer_id": customer_id, "email": email, "company_name": company_name}.items() if v}
-        }
-    else:
-        return customer.copy()
+        return make_error(
+            "Customer not found",
+            reason="No customer record matched the provided identifiers.",
+            hints=[
+                "Double-check the customer_id, email, or company_name values.",
+                "Try using company_name with a partial match (e.g., 'TechCorp')."
+            ],
+            retryable=True,
+            follow_up_tools=["lookup_customer"],
+            search_criteria={k: v for k, v in {"customer_id": customer_id, "email": email, "company_name": company_name}.items() if v}
+        )
+    return customer.copy()
 
 
 def check_customer_status(customer_id):
@@ -247,20 +272,26 @@ def check_customer_status(customer_id):
     customer = search_customer(customer_id=customer_id)
     
     if not customer:
-        return {
-            "error": f"Customer {customer_id} not found",
-            "customer_id": customer_id
-        }
-    else:
-        return {
-            "customer_id": customer["customer_id"],
-            "company_name": customer["company_name"],
-            "status": customer["status"],
-            "tier": customer["tier"],
-            "account_manager": customer["account_manager"],
-            "last_activity": customer["last_activity"],
-            "created_date": customer["created_date"]
-        }
+        return make_error(
+            f"Customer {customer_id} not found",
+            reason="The requested customer_id is not present in the sample dataset.",
+            hints=[
+                "Call lookup_customer with company_name or email to rediscover the customer_id.",
+                "Use list_customer_contacts to retrieve contacts once a valid customer is identified."
+            ],
+            retryable=True,
+            follow_up_tools=["lookup_customer"],
+            customer_id=customer_id
+        )
+    return {
+        "customer_id": customer["customer_id"],
+        "company_name": customer["company_name"],
+        "status": customer["status"],
+        "tier": customer["tier"],
+        "account_manager": customer["account_manager"],
+        "last_activity": customer["last_activity"],
+        "created_date": customer["created_date"]
+    }
 
 
 def get_sla_terms(customer_id):
@@ -280,17 +311,23 @@ def get_sla_terms(customer_id):
     customer = search_customer(customer_id=customer_id)
     
     if not customer:
-        return {
-            "error": f"Customer {customer_id} not found",
-            "customer_id": customer_id
-        }
-    else:
-        return {
-            "customer_id": customer["customer_id"],
-            "company_name": customer["company_name"],
-            "tier": customer["tier"],
-            "sla_terms": customer["sla_terms"]
-        }
+        return make_error(
+            f"Customer {customer_id} not found",
+            reason="SLA information is only available for known customers.",
+            hints=[
+                "Call lookup_customer first to confirm the customer_id.",
+                "If the customer is new, add it to the CUSTOMERS dataset before retrying."
+            ],
+            retryable=True,
+            follow_up_tools=["lookup_customer"],
+            customer_id=customer_id
+        )
+    return {
+        "customer_id": customer["customer_id"],
+        "company_name": customer["company_name"],
+        "tier": customer["tier"],
+        "sla_terms": customer["sla_terms"]
+    }
 
 
 def list_customer_contacts(customer_id):
@@ -310,17 +347,22 @@ def list_customer_contacts(customer_id):
     customer = search_customer(customer_id=customer_id)
     
     if not customer:
-        return {
-            "error": f"Customer {customer_id} not found",
-            "customer_id": customer_id
-        }
-    else:
-        return {
-            "customer_id": customer["customer_id"],
-            "company_name": customer["company_name"],
-            "contacts": customer["contacts"],
-            "total_contacts": len(customer["contacts"])
-        }
+        return make_error(
+            f"Customer {customer_id} not found",
+            reason="Contacts can only be listed for customers that exist in the dataset.",
+            hints=[
+                "Run lookup_customer to confirm the customer_id or discover alternatives."
+            ],
+            retryable=True,
+            follow_up_tools=["lookup_customer"],
+            customer_id=customer_id
+        )
+    return {
+        "customer_id": customer["customer_id"],
+        "company_name": customer["company_name"],
+        "contacts": customer["contacts"],
+        "total_contacts": len(customer["contacts"])
+    }
 
 
 # ============================================================================

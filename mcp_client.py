@@ -70,6 +70,37 @@ def _run_async(coro):
         return loop.run_until_complete(coro)
 
 
+def _make_error_payload(message: str, *, reason: Optional[str] = None, hints: Optional[List[str]] = None,
+                        retryable: bool = False, follow_up_tools: Optional[List[str]] = None,
+                        context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Create a structured error payload suitable for JSON serialization."""
+    payload: Dict[str, Any] = {"error": message, "retryable": retryable}
+    if reason:
+        payload["reason"] = reason
+    if hints:
+        payload["suggested_actions"] = hints
+    if follow_up_tools:
+        payload["follow_up_tools"] = follow_up_tools
+    if context:
+        payload["context"] = context
+    return payload
+
+
+def _make_error_json(*, message: str, reason: Optional[str] = None, hints: Optional[List[str]] = None,
+                     retryable: bool = False, follow_up_tools: Optional[List[str]] = None,
+                     context: Optional[Dict[str, Any]] = None) -> str:
+    """Serialize a structured error payload as JSON for OpenAI tool responses."""
+    payload = _make_error_payload(
+        message,
+        reason=reason,
+        hints=hints,
+        retryable=retryable,
+        follow_up_tools=follow_up_tools,
+        context=context
+    )
+    return json.dumps(payload)
+
+
 class MCPOrchestrator:
     """
     Orchestrates multiple MCP servers and provides OpenAI GPT-4 integration
@@ -313,12 +344,32 @@ class MCPOrchestrator:
         server_name = self.tool_to_server_map.get(tool_name)
 
         if not server_name:
-            return json.dumps({"error": f"Tool {tool_name} not found"})
+            available_tools = sorted(self.tool_to_server_map.keys())
+            return _make_error_json(
+                message=f"Tool {tool_name} not found",
+                reason="The requested tool name is not registered with the active MCP servers.",
+                hints=[
+                    "Call get_available_tools to refresh the tool list.",
+                    "Select one of the tool names provided in the available tools list."
+                ],
+                retryable=True,
+                follow_up_tools=available_tools[:5],
+                context={"available_tools": available_tools}
+            )
 
         # Get the server session
         server_info = self.server_sessions.get(server_name)
         if not server_info:
-            return json.dumps({"error": f"Server {server_name} not connected"})
+            return _make_error_json(
+                message=f"Server {server_name} not connected",
+                reason="The orchestrator does not have an active session with the server that hosts this tool.",
+                hints=[
+                    "Call start_servers before invoking tools.",
+                    "If servers were stopped, run stop_servers then start_servers to refresh connections."
+                ],
+                retryable=True,
+                context={"server_name": server_name}
+            )
 
         try:
             session = server_info["session"]
@@ -333,7 +384,16 @@ class MCPOrchestrator:
                 return json.dumps({"result": "Tool executed successfully but returned no content"})
 
         except Exception as e:
-            return json.dumps({"error": f"Error calling tool {tool_name}: {str(e)}"})
+            return _make_error_json(
+                message=f"Error calling tool {tool_name}",
+                reason=str(e),
+                hints=[
+                    "Validate the arguments against the tool schema.",
+                    "If the issue persists, inspect server logs for stack traces."
+                ],
+                retryable=True,
+                context={"tool_name": tool_name}
+            )
 
     def query(self, prompt: str, api_key: str, max_iterations: int = 10) -> str:
         """

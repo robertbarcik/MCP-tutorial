@@ -406,6 +406,15 @@ Orchestrator                           OpenAI API
 └─────────────────────────────────────────┘
 ```
 
+All MCP servers emit a shared error envelope:
+- `error`: short problem statement
+- `reason`: human-readable diagnosis
+- `suggested_actions`: concrete follow-up ideas
+- `retryable`: whether the caller should try again with new parameters
+- Optional `follow_up_tools` and `context` fields that point GPT toward useful next steps
+
+The orchestrator returns the same structure when tools are missing or sessions fail, so the agent loop receives consistent guidance regardless of where the failure occurs.
+
 ## Security Considerations
 
 1. **API Key Management**

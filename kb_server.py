@@ -10,6 +10,22 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
 
+def make_error(message, *, reason=None, hints=None, retryable=False, follow_up_tools=None, **extra):
+    """Return a structured error payload for LLM consumption."""
+    payload = {"error": message}
+    if reason:
+        payload["reason"] = reason
+    if hints:
+        payload["suggested_actions"] = hints
+    payload["retryable"] = retryable
+    if follow_up_tools:
+        payload["follow_up_tools"] = follow_up_tools
+    for key, value in extra.items():
+        if value is not None:
+            payload[key] = value
+    return payload
+
+
 # Sample knowledge base articles
 KB_ARTICLES = [
     {
@@ -501,7 +517,17 @@ def get_article(article_id):
     """Get full article content. Can be called directly."""
     article = next((a for a in KB_ARTICLES if a["article_id"] == article_id), None)
     if not article:
-        return {"error": f"Article {article_id} not found", "article_id": article_id}
+        return make_error(
+            f"Article {article_id} not found",
+            reason="The knowledge base does not include that article_id.",
+            hints=[
+                "Call search_solutions with keywords related to the issue.",
+                "Use find_related_articles starting from a known article to explore similar topics."
+            ],
+            retryable=True,
+            follow_up_tools=["search_solutions", "find_related_articles"],
+            article_id=article_id
+        )
     return article.copy()
 
 
@@ -509,7 +535,17 @@ def find_related_articles(article_id=None, topic=None, limit=5):
     """Find related articles. Can be called directly."""
     related = find_related(article_id, topic, limit)
     if article_id and not related and not any(a["article_id"] == article_id for a in KB_ARTICLES):
-        return {"error": f"Article {article_id} not found", "article_id": article_id}
+        return make_error(
+            f"Article {article_id} not found",
+            reason="Cannot recommend related content because the source article does not exist.",
+            hints=[
+                "Run search_solutions using the article topic to find existing entries.",
+                "Confirm the article_id format (e.g., KB-001)."
+            ],
+            retryable=True,
+            follow_up_tools=["search_solutions"],
+            article_id=article_id
+        )
     return {
         "article_id": article_id, "topic": topic,
         "related_articles": [{"article_id": r["article"]["article_id"], "title": r["article"]["title"], "category": r["article"]["category"], "relevance_score": r["relevance_score"], "common_tags": r.get("common_tags", [])} for r in related],

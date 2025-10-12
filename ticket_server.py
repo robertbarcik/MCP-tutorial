@@ -11,6 +11,22 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
 
+def make_error(message, *, reason=None, hints=None, retryable=False, follow_up_tools=None, **extra):
+    """Standardise ticket-server error payloads for downstream LLM consumers."""
+    payload = {"error": message}
+    if reason:
+        payload["reason"] = reason
+    if hints:
+        payload["suggested_actions"] = hints
+    payload["retryable"] = retryable
+    if follow_up_tools:
+        payload["follow_up_tools"] = follow_up_tools
+    for key, value in extra.items():
+        if value is not None:
+            payload[key] = value
+    return payload
+
+
 # Sample ticket data
 TICKETS = [
     {
@@ -425,12 +441,18 @@ def get_ticket_details(ticket_id):
     ticket = next((t for t in TICKETS if t["ticket_id"] == ticket_id), None)
 
     if not ticket:
-        return {
-            "error": f"Ticket {ticket_id} not found",
-            "ticket_id": ticket_id
-        }
-    else:
-        return ticket.copy()
+        return make_error(
+            f"Ticket {ticket_id} not found",
+            reason="The ticket_id did not match any tickets in the dataset.",
+            hints=[
+                "Call search_tickets with customer_id or priority filters to rediscover the ticket.",
+                "Verify the ticket_id format (e.g., TKT-1001)."
+            ],
+            retryable=True,
+            follow_up_tools=["search_tickets"],
+            ticket_id=ticket_id
+        )
+    return ticket.copy()
 
 
 def get_ticket_metrics(time_period="last_7_days"):
@@ -468,10 +490,17 @@ def find_similar_tickets_to(ticket_id, limit=5):
     reference_ticket = next((t for t in TICKETS if t["ticket_id"] == ticket_id), None)
 
     if not reference_ticket:
-        return {
-            "error": f"Ticket {ticket_id} not found",
-            "ticket_id": ticket_id
-        }
+        return make_error(
+            f"Ticket {ticket_id} not found",
+            reason="Cannot compute similarity because the reference ticket is missing.",
+            hints=[
+                "Search for tickets by subject or tags using search_tickets.",
+                "Make sure the ticket_id belongs to the same dataset (TKT-####)."
+            ],
+            retryable=True,
+            follow_up_tools=["search_tickets"],
+            ticket_id=ticket_id
+        )
 
     similar = find_similar_tickets(reference_ticket, TICKETS, int(limit))
     return {

@@ -212,6 +212,12 @@ All data uses 2024-2025 dates and valid cross-references.
 - Graceful shutdown of all processes
 - OpenAI API error handling
 
+#### LLM-Friendly Error Responses
+- MCP servers format failures via a lightweight `make_error(...)` helper.
+- Responses include `error`, `reason`, `suggested_actions`, `retryable`, and optional `follow_up_tools`/`context`.
+- Structured hints help LLM clients choose the next tool without guesswork.
+- The orchestrator mirrors this format when a tool or server is unavailable, keeping guidance consistent end-to-end.
+
 ### Extensibility
 - Easy to add new MCP servers
 - Modular server architecture
