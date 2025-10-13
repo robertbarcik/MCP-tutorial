@@ -43,11 +43,11 @@ echo ""
 # Test server imports
 echo "3. Testing server files..."
 for server in ticket_server customer_server billing_server kb_server asset_server; do
-    $PYTHON_CMD -c "from servers import ${server}" 2>/dev/null
+    $PYTHON_CMD -c "import ${server}" 2>/dev/null
     if [ $? -eq 0 ]; then
-        echo "   ✓ servers/${server}.py"
+        echo "   ✓ ${server}.py"
     else
-        echo "   ✗ servers/${server}.py has import errors"
+        echo "   ✗ ${server}.py has import errors"
     fi
 done
 echo ""

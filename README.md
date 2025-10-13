@@ -257,12 +257,11 @@ MCP-tutorial/
 ├── README.md                              # This file - complete learning guide
 ├── requirements.txt                       # Python dependencies
 │
-├── servers/                               # MCP server implementations
-│   ├── ticket_server.py                   # Ticket management (4 tools)
-│   ├── customer_server.py                 # Customer database (4 tools)
-│   ├── billing_server.py                  # Billing system (4 tools)
-│   ├── kb_server.py                       # Knowledge base (4 tools)
-│   └── asset_server.py                    # Asset tracking (4 tools)
+├── ticket_server.py                       # Ticket management MCP server (4 tools)
+├── customer_server.py                     # Customer database MCP server (4 tools)
+├── billing_server.py                      # Billing system MCP server (4 tools)
+├── kb_server.py                           # Knowledge base MCP server (4 tools)
+├── asset_server.py                        # Asset tracking MCP server (4 tools)
 │
 ├── mcp_client.py                          # Orchestrator (coordinates all servers)
 ├── interactive_client.py                  # CLI chat interface
@@ -799,7 +798,7 @@ The orchestrator converts MCP tools to OpenAI's function calling format:
 **Goal:** Add a tool to count tickets by priority
 
 **Steps:**
-1. Open `servers/ticket_server.py`
+1. Open `ticket_server.py`
 2. Add a new function:
 ```python
 def count_tickets_by_priority():
@@ -835,7 +834,7 @@ Show me their names, ticket counts, and total overdue amounts."
 **Goal:** Add better error guidance when a customer is not found
 
 **Steps:**
-1. Open `servers/customer_server.py`
+1. Open `customer_server.py`
 2. Find the `lookup_customer()` function
 3. Enhance the error response with:
    - More specific hints
@@ -875,11 +874,11 @@ Data is cross-referenced: tickets link to customers, invoices link to tickets, a
 |------|---------|
 | `mcp_client.py` | Orchestrator - coordinates all servers |
 | `interactive_client.py` | CLI interface for natural language queries |
-| `servers/ticket_server.py` | Ticket management MCP server |
-| `servers/customer_server.py` | Customer database MCP server |
-| `servers/billing_server.py` | Billing system MCP server |
-| `servers/kb_server.py` | Knowledge base MCP server |
-| `servers/asset_server.py` | Asset tracking MCP server |
+| `ticket_server.py` | Ticket management MCP server |
+| `customer_server.py` | Customer database MCP server |
+| `billing_server.py` | Billing system MCP server |
+| `kb_server.py` | Knowledge base MCP server |
+| `asset_server.py` | Asset tracking MCP server |
 | `MCP_Demo.ipynb` | Jupyter notebook with direct function calls |
 
 ### Performance Characteristics
@@ -895,7 +894,7 @@ Data is cross-referenced: tickets link to customers, invoices link to tickets, a
 **Servers won't start:**
 - Check Python version: `python --version` (need 3.10+)
 - Verify all server files exist
-- Try running a single server: `python servers/ticket_server.py`
+- Try running a single server: `python ticket_server.py`
 
 **OpenAI API errors:**
 - Verify API key: `echo $OPENAI_API_KEY`
