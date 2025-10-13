@@ -1,6 +1,6 @@
 """
 MCP Orchestrator Client
-Coordinates multiple MCP servers and integrates with OpenAI's GPT-4 for function calling
+Coordinates multiple MCP servers and integrates with OpenAI's gpt-5-nano for function calling
 Works seamlessly in both regular Python and Jupyter notebooks
 """
 
@@ -103,7 +103,7 @@ def _make_error_json(*, message: str, reason: Optional[str] = None, hints: Optio
 
 class MCPOrchestrator:
     """
-    Orchestrates multiple MCP servers and provides OpenAI GPT-4 integration
+    Orchestrates multiple MCP servers and provides OpenAI gpt-5-nano integration
     with function calling capabilities.
 
     Works seamlessly in both Jupyter notebooks and regular Python scripts.
@@ -397,15 +397,15 @@ class MCPOrchestrator:
 
     def query(self, prompt: str, api_key: str, max_iterations: int = 10) -> str:
         """
-        Process a user query using OpenAI GPT-4 with function calling.
+        Process a user query using OpenAI gpt-5-nano with function calling.
 
         Works in both Jupyter notebooks and regular Python.
 
         This implements a multi-turn conversation loop:
-        1. Send user prompt + available tools to GPT-4
-        2. If GPT-4 wants to call tools, execute them on MCP servers
-        3. Send tool results back to GPT-4
-        4. Repeat until GPT-4 gives a final answer
+        1. Send user prompt + available tools to gpt-5-nano
+        2. If gpt-5-nano wants to call tools, execute them on MCP servers
+        3. Send tool results back to gpt-5-nano
+        4. Repeat until gpt-5-nano gives a final answer
 
         Args:
             prompt: User's question or request
@@ -413,7 +413,7 @@ class MCPOrchestrator:
             max_iterations: Maximum number of tool calling rounds (safety limit)
 
         Returns:
-            Final text response from GPT-4
+            Final text response from gpt-5-nano
         """
         return _run_async(self._async_query(prompt, api_key, max_iterations))
 
@@ -446,7 +446,7 @@ class MCPOrchestrator:
 
                 # Call OpenAI API with tools
                 response = client.chat.completions.create(
-                    model="gpt-4",
+                    model="gpt-5-nano",
                     messages=messages,
                     tools=openai_tools,
                     tool_choice="auto"  # Let the model decide when to use tools

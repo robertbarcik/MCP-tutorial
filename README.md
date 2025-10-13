@@ -1,6 +1,6 @@
 # MCP Tutorial - Multi-Server IT Support System
 
-A hands-on demonstration of the **Model Context Protocol (MCP)** with 5 specialized servers orchestrated by OpenAI GPT-4.
+A hands-on demonstration of the **Model Context Protocol (MCP)** with 5 specialized servers orchestrated by OpenAI gpt-5-nano.
 
 ## What You'll Learn
 
@@ -97,7 +97,7 @@ MCP-tutorial/
 │              MCP Orchestrator (mcp_client.py)               │
 │  - Manages server processes                                 │
 │  - Coordinates tool calls                                   │
-│  - Integrates with OpenAI GPT-4                            │
+│  - Integrates with OpenAI gpt-5-nano                       │
 └─────────────────────────────────────────────────────────────┘
           │          │          │          │          │
           ▼          ▼          ▼          ▼          ▼

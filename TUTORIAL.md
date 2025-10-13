@@ -44,7 +44,7 @@ MCP solves these problems by providing:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                         LLM (GPT-4)                          │
+│                       LLM (gpt-5-nano)                       │
 │              "What are the critical tickets?"                │
 └─────────────────────────────────────────────────────────────┘
                               │
@@ -153,7 +153,7 @@ class MCPOrchestrator:
 
     def query(self, prompt: str, api_key: str):
         # Convert MCP tools to OpenAI function format
-        # Send prompt + tools to GPT-4
+        # Send prompt + tools to gpt-5-nano
         # Execute tool calls on appropriate servers
         # Multi-turn conversation until final answer
 ```
@@ -165,14 +165,14 @@ User: "What are the critical tickets for customer CUST-001?"
          │
          ▼
     ┌─────────────────────────────────────────┐
-    │ Orchestrator sends to GPT-4:            │
+    │ Orchestrator sends to gpt-5-nano:       │
     │ - User question                          │
     │ - All 20 available tools                │
     └─────────────────────────────────────────┘
          │
          ▼
     ┌─────────────────────────────────────────┐
-    │ GPT-4 decides to call:                  │
+    │ gpt-5-nano decides to call:             │
     │ search_tickets(customer_id="CUST-001",  │
     │                priority="critical")      │
     └─────────────────────────────────────────┘
@@ -185,7 +185,7 @@ User: "What are the critical tickets for customer CUST-001?"
          │
          ▼
     ┌─────────────────────────────────────────┐
-    │ GPT-4 receives results                  │
+    │ gpt-5-nano receives results             │
     │ Synthesizes final answer                │
     │ "Customer CUST-001 has 2 critical..."   │
     └─────────────────────────────────────────┘
@@ -222,7 +222,7 @@ MCP-tutorial/
 ### Prerequisites
 
 - **Python 3.10+**
-- **OpenAI API Key** (for GPT-4 integration)
+- **OpenAI API Key** (for gpt-5-nano integration)
 
 ### Installation
 
@@ -279,7 +279,7 @@ Ask questions in plain English:
 - "Which assets have expired warranties?"
 
 **What you'll learn:**
-- How GPT-4 decides which tools to call
+- How gpt-5-nano decides which tools to call
 - Multi-turn conversation patterns
 - Tool call chaining and data correlation
 
@@ -340,7 +340,7 @@ Here are example queries you can try with `interactive_client.py`. They demonstr
 Query: "What are all the critical priority tickets? List them with their IDs, subjects, and status."
 
 What happens:
-- GPT-4 calls: search_tickets(priority="critical")
+- gpt-5-nano calls: search_tickets(priority="critical")
 - Returns: List of critical tickets from ticket server
 ```
 
@@ -349,9 +349,9 @@ What happens:
 Query: "Tell me about customer CUST-001. What are their SLA terms and who are their contacts?"
 
 What happens:
-- GPT-4 calls: lookup_customer(customer_id="CUST-001")
-- GPT-4 calls: get_sla_terms(customer_id="CUST-001")
-- GPT-4 calls: list_customer_contacts(customer_id="CUST-001")
+- gpt-5-nano calls: lookup_customer(customer_id="CUST-001")
+- gpt-5-nano calls: get_sla_terms(customer_id="CUST-001")
+- gpt-5-nano calls: list_customer_contacts(customer_id="CUST-001")
 - Returns: Comprehensive customer information
 ```
 
@@ -360,7 +360,7 @@ What happens:
 Query: "Show me all overdue invoices and which customers have outstanding balances."
 
 What happens:
-- GPT-4 calls: get_billing_history() or check_payment_status()
+- gpt-5-nano calls: get_billing_history() or check_payment_status()
 - May call: lookup_customer() for each customer with overdue invoices
 - Returns: Financial summary with customer details
 ```
@@ -370,7 +370,7 @@ What happens:
 Query: "Find knowledge base articles about Windows BSOD issues. What are the recommended solutions?"
 
 What happens:
-- GPT-4 calls: search_solutions(query="BSOD")
+- gpt-5-nano calls: search_solutions(query="BSOD")
 - May call: get_article() for specific articles
 - Returns: Relevant articles with solutions
 ```
@@ -380,7 +380,7 @@ What happens:
 Query: "Which assets have warranties expiring in the next 30 days or have already expired?"
 
 What happens:
-- GPT-4 calls: check_warranty() for multiple assets
+- gpt-5-nano calls: check_warranty() for multiple assets
 - Or: lookup_asset() with filtering
 - Returns: List of assets needing attention
 ```
@@ -392,10 +392,10 @@ What happens:
 Query: "For customer CUST-002 (DataFlow Solutions), show me their current tickets, outstanding invoices, and assets. Is there anything that needs immediate attention?"
 
 What happens:
-- GPT-4 calls: lookup_customer(customer_id="CUST-002")
-- GPT-4 calls: search_tickets(customer_id="CUST-002")
-- GPT-4 calls: calculate_outstanding_balance(customer_id="CUST-002")
-- GPT-4 calls: lookup_asset(customer_id="CUST-002")
+- gpt-5-nano calls: lookup_customer(customer_id="CUST-002")
+- gpt-5-nano calls: search_tickets(customer_id="CUST-002")
+- gpt-5-nano calls: calculate_outstanding_balance(customer_id="CUST-002")
+- gpt-5-nano calls: lookup_asset(customer_id="CUST-002")
 - Returns: Comprehensive analysis across all systems
 ```
 
@@ -404,9 +404,9 @@ What happens:
 Query: "Find similar tickets to TKT-1001 and check if there's a knowledge base article that could help resolve it."
 
 What happens:
-- GPT-4 calls: get_ticket_details(ticket_id="TKT-1001")
-- GPT-4 calls: find_similar_tickets(ticket_id="TKT-1001")
-- GPT-4 calls: search_solutions() based on ticket tags/category
+- gpt-5-nano calls: get_ticket_details(ticket_id="TKT-1001")
+- gpt-5-nano calls: find_similar_tickets(ticket_id="TKT-1001")
+- gpt-5-nano calls: search_solutions() based on ticket tags/category
 - Returns: Related tickets and relevant KB articles
 ```
 
@@ -430,7 +430,7 @@ Try these to see advanced multi-tool coordination:
 
 ### Error Handling: LLM-Friendly Responses
 
-One key innovation in this tutorial is **structured error messages** that help GPT-4 recover gracefully:
+One key innovation in this tutorial is **structured error messages** that help gpt-5-nano recover gracefully:
 
 ```python
 def make_error(message, *, reason=None, hints=None, retryable=False,
@@ -461,7 +461,7 @@ Example error response:
 }
 ```
 
-This helps GPT-4:
+This helps gpt-5-nano:
 1. Understand what went wrong
 2. Know whether to retry with different parameters
 3. Choose the next best tool to call
@@ -584,7 +584,7 @@ def count_tickets_by_priority():
 **Goal:** Find customers with high-priority tickets and overdue invoices
 
 **Think about:**
-- Which tools would GPT-4 need to call?
+- Which tools would gpt-5-nano need to call?
 - In what order?
 - How would results be correlated?
 

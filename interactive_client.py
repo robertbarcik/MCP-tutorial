@@ -1,6 +1,6 @@
 """
 Interactive MCP Client with OpenAI Integration
-Allows you to chat with GPT-4 using all MCP server tools
+Allows you to chat with gpt-5-nano using all MCP server tools
 """
 
 import os
@@ -52,7 +52,7 @@ def main():
 
 if __name__ == "__main__":
     """
-    Interactive MCP client with OpenAI GPT-4 integration.
+    Interactive MCP client with OpenAI gpt-5-nano integration.
 
     Set your OpenAI API key:
         export OPENAI_API_KEY="sk-..."
