@@ -39,14 +39,23 @@ Ask questions like:
 - "Show me customer CUST-001's information and SLA terms"
 - "Which assets have expired warranties?"
 
-**Jupyter Notebook:**
+**Jupyter Notebooks:**
 ```bash
+# Basic tutorial - Tools and multi-server orchestration
 jupyter notebook MCP_Demo.ipynb
+
+# Advanced features - Resources, Prompts, and Sampling
+jupyter notebook 2_MCP_resources_prompts_sampling.ipynb
 ```
 
 **Test Server Startup:**
 ```bash
 python mcp_client.py
+```
+
+**Advanced Sampling Demo:**
+```bash
+python sampling_demo.py --demo
 ```
 
 ---
@@ -245,20 +254,23 @@ User: "What are the critical tickets for customer CUST-001?"
 
 ```
 MCP-tutorial/
-├── README.md                    # This file - complete learning guide
-├── requirements.txt             # Python dependencies
+├── README.md                              # This file - complete learning guide
+├── requirements.txt                       # Python dependencies
 │
-├── servers/                     # MCP server implementations
-│   ├── ticket_server.py         # Ticket management (4 tools)
-│   ├── customer_server.py       # Customer database (4 tools)
-│   ├── billing_server.py        # Billing system (4 tools)
-│   ├── kb_server.py             # Knowledge base (4 tools)
-│   └── asset_server.py          # Asset tracking (4 tools)
+├── servers/                               # MCP server implementations
+│   ├── ticket_server.py                   # Ticket management (4 tools)
+│   ├── customer_server.py                 # Customer database (4 tools)
+│   ├── billing_server.py                  # Billing system (4 tools)
+│   ├── kb_server.py                       # Knowledge base (4 tools)
+│   └── asset_server.py                    # Asset tracking (4 tools)
 │
-├── mcp_client.py                # Orchestrator (coordinates all servers)
-├── interactive_client.py        # CLI chat interface
-├── MCP_Demo.ipynb               # Jupyter notebook demo
-└── test_intents.py              # Intent mapping test framework
+├── mcp_client.py                          # Orchestrator (coordinates all servers)
+├── interactive_client.py                  # CLI chat interface
+├── MCP_Demo.ipynb                         # Jupyter notebook - basic tutorial
+├── 2_MCP_resources_prompts_sampling.ipynb # Advanced features notebook
+├── sampling_demo.py                       # Sampling demo script (advanced)
+├── test_intents.py                        # Intent mapping test framework
+└── solutions_advanced_features.md         # Solutions for advanced exercises
 ```
 
 ### The Five Servers
@@ -382,6 +394,27 @@ print(tickets)
    - How data from multiple servers combines
    - Tool selection strategies
    - Error recovery patterns
+
+### Path 4: Advanced Features (Resources, Prompts, Sampling)
+
+**Best for:** Students who completed the basic tutorial and want to explore advanced MCP capabilities
+
+```bash
+jupyter notebook 2_MCP_resources_prompts_sampling.ipynb
+```
+
+**What you'll learn:**
+- **Resources** 📄 - Exposing readable documents and data (HR domain examples)
+- **Prompts** 💬 - Creating reusable AI workflow templates
+- **Sampling** 🤖 - Bidirectional LLM communication (advanced pattern)
+
+**Topics covered:**
+- When to use Resources vs Tools
+- Building discoverable prompt libraries
+- Privacy-preserving AI with sampling
+- E-commerce payment analysis demo
+
+**Note:** The sampling section includes theory + reference to `sampling_demo.py` for hands-on practice.
 
 ---
 
