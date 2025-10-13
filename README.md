@@ -42,7 +42,7 @@ Ask questions like:
 **Jupyter Notebooks:**
 ```bash
 # Basic tutorial - Tools and multi-server orchestration
-jupyter notebook MCP_Demo.ipynb
+jupyter notebook 1_MCP_Demo.ipynb
 
 # Advanced features - Resources, Prompts, and Sampling
 jupyter notebook 2_MCP_resources_prompts_sampling.ipynb
@@ -265,7 +265,7 @@ MCP-tutorial/
 │
 ├── mcp_client.py                          # Orchestrator (coordinates all servers)
 ├── interactive_client.py                  # CLI chat interface
-├── MCP_Demo.ipynb                         # Jupyter notebook - basic tutorial
+├── 1_MCP_Demo.ipynb                       # Jupyter notebook - basic tutorial
 ├── 2_MCP_resources_prompts_sampling.ipynb # Advanced features notebook
 ├── sampling_demo.py                       # Sampling demo script (advanced)
 ├── test_intents.py                        # Intent mapping test framework
@@ -355,7 +355,7 @@ Ask questions in plain English:
 **Best for:** Testing individual functions and exploring data
 
 ```bash
-jupyter notebook MCP_Demo.ipynb
+jupyter notebook 1_MCP_Demo.ipynb
 ```
 
 The notebook shows **direct function calls**:
@@ -879,7 +879,7 @@ Data is cross-referenced: tickets link to customers, invoices link to tickets, a
 | `billing_server.py` | Billing system MCP server |
 | `kb_server.py` | Knowledge base MCP server |
 | `asset_server.py` | Asset tracking MCP server |
-| `MCP_Demo.ipynb` | Jupyter notebook with direct function calls |
+| `1_MCP_Demo.ipynb` | Jupyter notebook with direct function calls |
 
 ### Performance Characteristics
 
@@ -909,7 +909,7 @@ Data is cross-referenced: tickets link to customers, invoices link to tickets, a
 **Jupyter issues:**
 - Don't try to use MCP orchestrator with subprocesses in Jupyter
 - Use direct function imports instead
-- See `MCP_Demo.ipynb` for examples
+- See `1_MCP_Demo.ipynb` for examples
 
 ---
 
