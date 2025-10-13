@@ -43,11 +43,11 @@ echo ""
 # Test server imports
 echo "3. Testing server files..."
 for server in ticket_server customer_server billing_server kb_server asset_server; do
-    $PYTHON_CMD -c "import ${server}" 2>/dev/null
+    $PYTHON_CMD -c "from servers import ${server}" 2>/dev/null
     if [ $? -eq 0 ]; then
-        echo "   ✓ ${server}.py"
+        echo "   ✓ servers/${server}.py"
     else
-        echo "   ✗ ${server}.py has import errors"
+        echo "   ✗ servers/${server}.py has import errors"
     fi
 done
 echo ""
@@ -87,6 +87,9 @@ echo "2. Try interactive mode (requires OpenAI API key):"
 echo "   export OPENAI_API_KEY='sk-...'"
 echo "   $PYTHON_CMD interactive_client.py"
 echo ""
-echo "3. Run example queries:"
-echo "   $PYTHON_CMD example_queries.py"
+echo "3. Run intent tests:"
+echo "   $PYTHON_CMD test_intents.py"
+echo ""
+echo "4. Explore Jupyter notebook:"
+echo "   jupyter notebook MCP_Demo.ipynb"
 echo ""
