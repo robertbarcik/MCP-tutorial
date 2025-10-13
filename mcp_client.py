@@ -121,27 +121,27 @@ class MCPOrchestrator:
         self.server_configs = {
             "ticket": {
                 "command": "python3" if sys.platform != "win32" else "python",
-                "args": ["ticket_server.py"],
+                "args": ["servers/ticket_server.py"],
                 "description": "Ticket management server"
             },
             "customer": {
                 "command": "python3" if sys.platform != "win32" else "python",
-                "args": ["customer_server.py"],
+                "args": ["servers/customer_server.py"],
                 "description": "Customer database server"
             },
             "billing": {
                 "command": "python3" if sys.platform != "win32" else "python",
-                "args": ["billing_server.py"],
+                "args": ["servers/billing_server.py"],
                 "description": "Billing server"
             },
             "kb": {
                 "command": "python3" if sys.platform != "win32" else "python",
-                "args": ["kb_server.py"],
+                "args": ["servers/kb_server.py"],
                 "description": "Knowledge base server"
             },
             "asset": {
                 "command": "python3" if sys.platform != "win32" else "python",
-                "args": ["asset_server.py"],
+                "args": ["servers/asset_server.py"],
                 "description": "Asset management server"
             }
         }
