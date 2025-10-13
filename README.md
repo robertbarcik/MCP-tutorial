@@ -58,9 +58,10 @@ python mcp_client.py
 3. [Repository Structure](#repository-structure)
 4. [Getting Started](#getting-started)
 5. [Learning Paths](#learning-paths)
-6. [Example Queries](#example-queries)
-7. [Technical Deep Dive](#technical-deep-dive)
-8. [Exercises](#exercises)
+6. [Testing Tool Selection](#testing-tool-selection)
+7. [Example Queries](#example-queries)
+8. [Technical Deep Dive](#technical-deep-dive)
+9. [Exercises](#exercises)
 
 ---
 
@@ -381,6 +382,153 @@ print(tickets)
    - How data from multiple servers combines
    - Tool selection strategies
    - Error recovery patterns
+
+---
+
+## Testing Tool Selection
+
+The repository includes `test_intents.py`, a comprehensive test framework that validates whether gpt-5-nano correctly selects the appropriate tools for different types of user queries.
+
+### What is Intent Mapping?
+
+**Intent mapping** is the process of understanding a user's natural language query and selecting the correct tool(s) to fulfill that request. This is a critical aspect of MCP systems because:
+
+- The same intent can be expressed in many different ways
+- gpt-5-nano must choose from 20 available tools
+- Multi-server queries require calling multiple tools in the right order
+- Poor tool selection leads to incorrect or incomplete answers
+
+### Why Test Intent Mapping?
+
+Testing ensures that:
+1. **Query variations are handled** - "What are critical tickets?" vs "Show me tickets marked as critical"
+2. **Correct tools are selected** - Search queries use search tools, not detail lookups
+3. **Multi-tool coordination works** - Complex queries call all necessary tools
+4. **Edge cases are covered** - Missing data, invalid IDs, ambiguous requests
+
+### Running the Tests
+
+**Basic usage:**
+```bash
+export OPENAI_API_KEY="sk-your-key-here"
+python test_intents.py
+```
+
+**What it tests:**
+
+The framework includes 8 intent categories with 5 query variations each (40 total test cases):
+
+1. **Search Critical Tickets** - Tests priority-based ticket searches
+2. **Customer with Tickets** - Tests cross-server queries (customer + tickets)
+3. **Billing Status** - Tests financial queries (invoices, payments)
+4. **Knowledge Base Search** - Tests KB article lookups
+5. **Asset Warranty Check** - Tests asset and warranty queries
+6. **Multi-Server Analysis** - Tests comprehensive customer overviews
+7. **Ticket Metrics** - Tests statistical queries
+8. **Similar Tickets** - Tests similarity matching
+
+### Understanding Test Results
+
+**Output format:**
+```
+Test Case: search_critical_tickets
+Description: User wants to find critical priority tickets
+Expected Tools: search_tickets
+============================================================
+
+  Testing: 'What are the critical tickets?'
+    ✅ PASS: All validations passed
+    Tools: search_tickets
+
+  Testing: 'Show me all critical priority tickets'
+    ✅ PASS: All validations passed
+    Tools: search_tickets
+
+  📊 Success Rate: 5/5 (100.0%)
+```
+
+**Success criteria:**
+- ✅ **Pass:** Correct tools were called with expected parameters
+- ❌ **Fail:** Wrong tools called, missing tools, or incorrect parameters
+
+**Overall summary:**
+```
+Total Test Variations: 40
+Passed: 38
+Failed: 2
+Overall Success Rate: 95.0%
+
+Per-Intent Breakdown:
+✅ search_critical_tickets      5/5 (100.0%)
+✅ customer_with_tickets         5/5 (100.0%)
+⚠️ billing_status               4/5 (80.0%)
+```
+
+### How It Works
+
+The test framework:
+
+1. **Starts all MCP servers** - Initializes the full orchestrator
+2. **Captures tool calls** - Intercepts which tools gpt-5-nano selects
+3. **Validates selections** - Checks if correct tools were called
+4. **Generates report** - Shows pass/fail for each query variation
+
+**Example test case:**
+```python
+{
+    "intent": "search_critical_tickets",
+    "description": "User wants to find critical priority tickets",
+    "variations": [
+        "What are the critical tickets?",
+        "Show me all critical priority tickets",
+        "List tickets with critical priority",
+    ],
+    "expected_tools": ["search_tickets"],
+    "expected_args_contain": {"priority": "critical"},
+}
+```
+
+### Teaching Use Cases
+
+Use `test_intents.py` to demonstrate:
+
+1. **Natural language variations** - Show students how many ways users express the same intent
+2. **Tool selection strategies** - Discuss why gpt-5-nano chose specific tools
+3. **Debugging failures** - Analyze why certain queries fail and how to improve them
+4. **Adding new intents** - Have students add test cases for new query types
+5. **Model comparison** - Test different models to compare tool selection accuracy
+
+### Extending the Tests
+
+Students can add their own test cases:
+
+```python
+{
+    "intent": "your_custom_intent",
+    "description": "What the user wants to accomplish",
+    "variations": [
+        "Query variation 1",
+        "Query variation 2",
+        "Query variation 3",
+    ],
+    "expected_tools": ["tool1", "tool2"],
+    "min_tool_calls": 2,  # At least 2 tools should be called
+}
+```
+
+### Common Failure Patterns
+
+**Too few tool calls:**
+- gpt-5-nano didn't gather enough information
+- May need more context in the query
+
+**Wrong tools selected:**
+- Query might be ambiguous
+- Tool descriptions might need clarification
+
+**Missing parameters:**
+- Expected arguments not provided
+- gpt-5-nano might need better examples
 
 ---
 
