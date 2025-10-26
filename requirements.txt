@@ -15,7 +15,7 @@ asyncio-contextmanager>=1.0.0
 # Type hints support
 typing-extensions>=4.0.0
 
-# Local Model Dependencies (for Notebook 3 & 4)
+# Local Model Dependencies (for Notebook 3)
 # Note: These are tested versions for Google Colab with T4 GPU
 transformers==4.57.1
 torch==2.8.0
