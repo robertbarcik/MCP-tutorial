@@ -27,3 +27,4 @@ Thumbs.db
 # Environment variables
 .env
 CLAUDE.md
+NOTEBOOK_GUIDELINES.md
