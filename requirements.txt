@@ -9,9 +9,6 @@ openai==2.30.0
 # Jupyter compatibility - allows nested event loops
 nest-asyncio==1.6.0
 
-# Async support
-asyncio-contextmanager>=1.0.0
-
 # Type hints support
 typing-extensions==4.13.2
 
@@ -19,5 +16,6 @@ typing-extensions==4.13.2
 # Note: These are tested versions for Google Colab with T4 GPU
 transformers==4.57.1
 torch==2.8.0
+torchvision==0.23.0
 accelerate==1.11.0
 bitsandbytes==0.48.1
