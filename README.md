@@ -974,12 +974,6 @@ Tool annotations are optional metadata you can attach to a tool definition to de
 
 Annotations do not change what the tool does. They help the host application decide how to present the tool to the user. A well-behaved client might show a confirmation dialog before running a destructive tool and skip it for read-only searches.
 
-### Log Notifications
-
-MCP servers can send log messages to the client while a tool is running, using the `notifications/message` method. Log messages carry a severity level (debug, info, warning, error) and a text string. The client can display them in a console, a sidebar, or an activity log.
-
-If you worked through the notebooks and used MCP Inspector, you already saw these. The flood of `notifications/message` entries that appeared in the Inspector sidebar was the ticket server sending log output. In a production setup, log notifications give you visibility into what a server is doing without having to look at the server's terminal output directly.
-
 ---
 
 ## Next Steps
