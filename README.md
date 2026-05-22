@@ -74,6 +74,9 @@ python sampling_demo.py --demo
 7. [Example Queries](#example-queries)
 8. [Technical Deep Dive](#technical-deep-dive)
 9. [Exercises](#exercises)
+10. [What Else MCP Can Do](#what-else-mcp-can-do)
+11. [Additional Resources](#additional-resources)
+12. [Next Steps](#next-steps)
 
 ---
 
