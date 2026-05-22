@@ -936,6 +936,52 @@ Data is cross-referenced: tickets link to customers, invoices link to tickets, a
 
 ---
 
+## What Else MCP Can Do
+
+This tutorial covers tools, resources, prompts, and sampling. MCP has a few more features worth knowing about, even if we don't implement them here.
+
+### Transport
+
+A transport is just how the client talks to the server. What is the connection?
+
+**stdio (what this tutorial uses):** Think of it like opening a calculator app on your laptop. Your code launches the server as a child process on the same machine and they talk through that process's input and output pipes. It is simple and reliable, but the server only exists while your script is running, only your script can use it, and it can never live on another machine. All five servers in this tutorial work this way.
+
+**Streamable HTTP (what production systems use):** Think of it like a website. The server runs somewhere as a web service at a URL like `https://tickets.mycompany.com/mcp`. Anyone with that URL can connect. Multiple clients can connect at the same time. It keeps running even after you close your laptop.
+
+Same MCP protocol, same tools, same everything. Just the connection method is different. Imagine a company wants to run the ticket server once, centrally, and let all their AI agents connect to it. With stdio that is not possible. Every user would have to run their own copy. With Streamable HTTP, you run it once and give people the URL. That is the practical difference: stdio is fine for development and learning, Streamable HTTP is what you need for a real deployed service.
+
+### Authentication
+
+When your server runs over Streamable HTTP, you need to control who can connect. MCP has built-in support for OAuth 2.0 authentication. A client that wants to connect to a protected server goes through an OAuth flow first, gets a token, and includes it with every request. The server validates the token before handling anything.
+
+In this tutorial all servers use stdio and run as local processes. There is no network, so there is nothing to authenticate. But if you deployed the ticket server as a web service at a real URL, you would want authentication in place so that only authorized clients can call your tools.
+
+### Roots
+
+Roots are a way for the client to tell the server which parts of the filesystem it is allowed to access. The client sends a list of root URIs (file paths or other resource locations) and the server is expected to stay within those boundaries. Think of it like handing someone access to one folder on your computer, not the entire drive.
+
+In this tutorial all servers work with in-memory data and never touch the filesystem. Roots only matter when a server needs to read or write files, at which point the client uses roots to set the scope of what the server is allowed to see.
+
+### Elicitation
+
+Elicitation lets a server pause during tool execution and ask the user a direct question. The normal flow is: the user asks something, the AI picks a tool, the tool runs, and the tool returns a result. With elicitation, the tool can interrupt that flow and ask for more information before it continues.
+
+An example: a user asks "cancel the ticket" without specifying which one. The server can send an elicitation request with a question like "Which ticket did you mean?" The host shows it to the user, the user answers, and the tool continues with the new information. It is useful for tools that genuinely need input they cannot infer from the original query.
+
+### Tool Annotations
+
+Tool annotations are optional metadata you can attach to a tool definition to describe how it behaves. Useful annotations include `readOnly` (the tool only reads data, it never changes anything), `destructive` (the tool can delete or modify records), and `requiresConfirmation` (the host should ask the user before running this tool).
+
+Annotations do not change what the tool does. They help the host application decide how to present the tool to the user. A well-behaved client might show a confirmation dialog before running a destructive tool and skip it for read-only searches.
+
+### Log Notifications
+
+MCP servers can send log messages to the client while a tool is running, using the `notifications/message` method. Log messages carry a severity level (debug, info, warning, error) and a text string. The client can display them in a console, a sidebar, or an activity log.
+
+If you worked through the notebooks and used MCP Inspector, you already saw these. The flood of `notifications/message` entries that appeared in the Inspector sidebar was the ticket server sending log output. In a production setup, log notifications give you visibility into what a server is doing without having to look at the server's terminal output directly.
+
+---
+
 ## Next Steps
 
 After completing this tutorial, you can:
