@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Model Context Protocol — MCP Tutorial</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f1f5f9;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .deck {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    background: #ffffff;
+    padding: 48px 72px;
+    flex-direction: column;
+  }
+  .slide.active { display: flex; }
+
+  /* heading zone — fixed so h2 sits at same y on every slide */
+  .slide-header {
+    height: 100px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    margin-bottom: 28px;
+  }
+
+  .slide-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 0;
+  }
+
+  /* nav */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 12px 24px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    flex-shrink: 0;
+  }
+  nav button {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    padding: 6px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 15px;
+  }
+  nav button:hover { background: #f1f5f9; }
+  nav button:disabled { opacity: 0.35; cursor: default; }
+  #counter { font-size: 14px; color: #64748b; min-width: 56px; text-align: center; }
+
+  .badge {
+    position: absolute;
+    top: 20px; right: 28px;
+    font-size: 13px;
+    color: #94a3b8;
+  }
+
+  /* typography — bumped up */
+  .eyebrow {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #2563eb;
+    margin-bottom: 10px;
+  }
+  h1 { font-size: 60px; font-weight: 800; line-height: 1.1; color: #0f172a; }
+  h2 { font-size: 34px; font-weight: 700; line-height: 1.25; color: #0f172a; }
+  .subtitle { font-size: 22px; color: #64748b; margin-top: 14px; }
+  p { font-size: 19px; line-height: 1.7; color: #475569; }
+
+  .pill {
+    display: inline-block;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    border-radius: 999px;
+    padding: 5px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 4px;
+  }
+
+  .cols { display: grid; gap: 44px; align-items: center; }
+  .cols-2   { grid-template-columns: 1fr 1fr; }
+  .cols-3-5 { grid-template-columns: 3fr 5fr; }
+  .cols-5-3 { grid-template-columns: 5fr 3fr; }
+
+  /* code */
+  pre {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 20px 24px;
+    font-size: 15px;
+    line-height: 1.7;
+    overflow: auto;
+    color: #1e293b;
+  }
+  code { font-family: "SF Mono", "Fira Code", monospace; }
+  .kw { color: #2563eb; font-weight: 600; }
+  .fn { color: #7c3aed; }
+  .st { color: #16a34a; }
+  .cm { color: #94a3b8; }
+  .nu { color: #d97706; }
+
+  /* card */
+  .card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #2563eb;
+    border-radius: 8px;
+    padding: 16px 20px;
+  }
+  .card h3 { font-size: 16px; font-weight: 700; color: #1d4ed8; margin-bottom: 6px; }
+  .card p  { font-size: 16px; color: #64748b; }
+
+  ul.check { list-style: none; padding: 0; }
+  ul.check li {
+    padding: 6px 0;
+    font-size: 19px;
+    color: #334155;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    line-height: 1.5;
+  }
+  ul.check li::before { content: "✓"; color: #16a34a; flex-shrink: 0; font-weight: 700; margin-top: 1px; font-size: 18px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th {
+    text-align: left;
+    padding: 10px 14px;
+    background: #f1f5f9;
+    color: #1d4ed8;
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  td { padding: 10px 14px; color: #334155; border-bottom: 1px solid #f1f5f9; vertical-align: top; line-height: 1.5; }
+  tr:last-child td { border-bottom: none; }
+  .tag-custom { background: #dcfce7; color: #166534; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+  .tag-sdk    { background: #dbeafe; color: #1e40af; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+
+  .accent-line {
+    width: 56px; height: 4px;
+    background: linear-gradient(90deg, #2563eb, #7c3aed);
+    border-radius: 2px;
+    margin: 20px 0;
+  }
+
+  .field-key   { color: #2563eb; }
+  .field-value { color: #16a34a; }
+  .field-hint  { color: #d97706; }
+
+  /* ─── shared CSS-diagram primitives ─── */
+  .node {
+    border: 2px solid #2563eb;
+    border-radius: 10px;
+    padding: 12px 18px;
+    text-align: center;
+    background: #eff6ff;
+    color: #1e3a8a;
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  .node.main {
+    background: #1d4ed8;
+    color: #ffffff;
+    border-color: #1d4ed8;
+  }
+  .node.sub {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+  .node small {
+    display: block;
+    font-weight: 400;
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 4px;
+  }
+  .node.main small { color: #bfdbfe; }
+
+  /* orchestrator box variant with bullet list */
+  .node.orch {
+    text-align: left;
+    padding: 14px 22px 14px 22px;
+    min-width: 480px;
+    max-width: 540px;
+  }
+  .node.orch .orch-title {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.25);
+  }
+  .node.orch ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .node.orch li {
+    font-size: 14px;
+    font-weight: 500;
+    padding: 3px 0;
+    display: flex;
+    gap: 10px;
+    line-height: 1.4;
+  }
+  .node.orch li::before {
+    content: "•";
+    color: #bfdbfe;
+    font-weight: 700;
+  }
+
+  .stem {
+    width: 2px;
+    background: #93c5fd;
+    margin: 0 auto;
+    position: relative;
+  }
+  .stem.down::after {
+    content: "";
+    position: absolute;
+    bottom: -1px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid #93c5fd;
+  }
+
+  /* ─── slide 2 fan-out diagram ─── */
+  .fanout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .fanout-vstem {
+    width: 2px;
+    height: 22px;
+    background: #93c5fd;
+    margin: 0 auto;
+  }
+  /* server row + line uses a grid with explicit middle/edge spacers */
+  .server-fork {
+    width: 86%;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+    gap: 0;
+    position: relative;
+    padding-top: 16px;          /* space for the horizontal line + small gap before stems */
+  }
+  /* horizontal line: spans exactly from the centre of the first 1fr cell (10%) to the centre of the last (90%) */
+  .server-fork::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 10%;
+    right: 10%;
+    height: 2px;
+    background: #93c5fd;
+  }
+  .fanout-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+  }
+  .fanout-col .stem { height: 20px; }
+  .fanout-col .node { margin: 0 6px; }
+
+  /* ─── slide 5 vertical flow ─── */
+  .vflow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+  }
+  .vflow .node {
+    min-width: 320px;
+    max-width: 400px;
+  }
+  .vflow .stem { height: 22px; }
+</style>
+</head>
+<body>
+
+<div class="deck">
+
+  <!-- ── 1: Title ── -->
+  <div class="slide active">
+    <div class="badge">1 / 6</div>
+    <div class="slide-header"></div>
+    <div class="slide-body">
+      <div class="eyebrow">Tutorial</div>
+      <h1>Model Context Protocol</h1>
+      <div class="accent-line"></div>
+      <p class="subtitle">Building multi-server AI systems with MCP</p>
+      <div style="margin-top: 40px; display: flex; gap: 8px; flex-wrap: wrap;">
+        <span class="pill">5 MCP servers</span>
+        <span class="pill">20 tools</span>
+        <span class="pill">gpt-5-nano</span>
+        <span class="pill">IT Support System</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2: Key Concepts ── -->
+  <div class="slide">
+    <div class="badge">2 / 6</div>
+    <div class="slide-header">
+      <div class="eyebrow">Key Concepts</div>
+      <h2>MCP is a standard interface between AI models and services</h2>
+    </div>
+    <div class="slide-body">
+      <div class="cols cols-3-5">
+        <p>
+          Without MCP, every integration requires custom code. MCP gives every service the same interface, so any AI model can discover and call tools from any server, regardless of what language either side is written in.
+        </p>
+
+        <div class="fanout">
+          <div class="node main" style="min-width: 480px;">
+            LLM &nbsp;(gpt-5-nano)
+            <small>"What are the critical tickets?"</small>
+          </div>
+          <div class="stem down" style="height: 22px;"></div>
+
+          <div class="node main orch">
+            <div class="orch-title">MCP Orchestrator</div>
+            <ul>
+              <li>Discovers tools from all servers</li>
+              <li>Converts tools to LLM-compatible format</li>
+              <li>Routes tool calls to correct server</li>
+              <li>Returns results back to LLM</li>
+            </ul>
+          </div>
+
+          <div class="fanout-vstem"></div>
+
+          <div class="server-fork">
+            <div class="fanout-col">
+              <div class="stem down"></div>
+              <div class="node sub">Ticket<br>Server</div>
+            </div>
+            <div class="fanout-col">
+              <div class="stem down"></div>
+              <div class="node sub">Customer<br>Server</div>
+            </div>
+            <div class="fanout-col">
+              <div class="stem down"></div>
+              <div class="node sub">Billing<br>Server</div>
+            </div>
+            <div class="fanout-col">
+              <div class="stem down"></div>
+              <div class="node sub">KB<br>Server</div>
+            </div>
+            <div class="fanout-col">
+              <div class="stem down"></div>
+              <div class="node sub">Asset<br>Server</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3: How MCP Servers Work ── -->
+  <div class="slide">
+    <div class="badge">3 / 6</div>
+    <div class="slide-header">
+      <div class="eyebrow">MCP Servers</div>
+      <h2>Each server is a standalone process that exposes tools</h2>
+    </div>
+    <div class="slide-body">
+      <div class="cols cols-2">
+        <div>
+          <ul class="check" style="margin-bottom: 22px;">
+            <li>Defines tools with names, descriptions, and parameter schemas</li>
+            <li>Communicates over stdio (local) or Streamable HTTP (production)</li>
+            <li>Returns structured JSON, success or a recoverable error</li>
+            <li>Runs independently, a crash in one server does not affect the others</li>
+          </ul>
+          <div class="card">
+            <h3>Our 5 servers</h3>
+            <p>ticket · customer · billing · knowledge base · asset<br>20 tools total, all discoverable by the AI model at runtime</p>
+          </div>
+        </div>
+        <pre><code><span class="cm"># Every server follows the same pattern</span>
+<span class="kw">from</span> mcp.server <span class="kw">import</span> Server
+<span class="kw">from</span> mcp.types <span class="kw">import</span> Tool
+
+app = <span class="fn">Server</span>(<span class="st">"ticket-management-server"</span>)
+
+<span class="fn">@app.list_tools()</span>
+<span class="kw">async def</span> <span class="fn">list_tools</span>():
+    <span class="kw">return</span> [
+        <span class="fn">Tool</span>(
+            name=<span class="st">"search_tickets"</span>,
+            description=<span class="st">"Search tickets by
+            priority, status or customer"</span>,
+            inputSchema={
+                <span class="st">"type"</span>: <span class="st">"object"</span>,
+                <span class="st">"properties"</span>: {
+                    <span class="st">"priority"</span>: {<span class="st">"type"</span>: <span class="st">"string"</span>},
+                    <span class="st">"status"</span>:   {<span class="st">"type"</span>: <span class="st">"string"</span>}
+                }
+            }
+        )
+    ]
+
+<span class="fn">@app.call_tool()</span>
+<span class="kw">async def</span> <span class="fn">call_tool</span>(name, arguments):
+    <span class="kw">if</span> name == <span class="st">"search_tickets"</span>:
+        <span class="kw">return</span> <span class="fn">search_tickets</span>(**arguments)</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 4: Structured Error Payloads ── -->
+  <div class="slide">
+    <div class="badge">4 / 6</div>
+    <div class="slide-header">
+      <div class="eyebrow">Error Design</div>
+      <h2>Errors are written for the AI model, not for humans</h2>
+    </div>
+    <div class="slide-body">
+      <div class="cols cols-2">
+        <div>
+          <p style="margin-bottom: 22px;">
+            When a tool fails, the server does not just say "not found." It explains what went wrong, whether the call can be retried, and which tool to try next. This lets the model recover on its own without asking the user.
+          </p>
+          <div class="card">
+            <h3>Example: find_related_articles("KB-999")</h3>
+            <p>Article KB-999 does not exist. The server cannot suggest related content, but it tells the model exactly what to do instead.</p>
+          </div>
+        </div>
+        <pre><code>{
+  <span class="field-key">"error"</span>:
+    <span class="field-value">"Article KB-999 not found"</span>,
+
+  <span class="field-key">"reason"</span>:
+    <span class="field-value">"Cannot recommend related content
+    because the source article
+    does not exist."</span>,
+
+  <span class="field-hint">"suggested_actions"</span>: [
+    <span class="field-hint">"Run search_solutions using the
+    article topic to find entries."</span>,
+    <span class="field-hint">"Confirm the article_id format
+    (e.g., KB-001)."</span>
+  ],
+
+  <span class="field-key">"retryable"</span>:      <span class="nu">true</span>,
+  <span class="field-key">"follow_up_tools"</span>: [<span class="st">"search_solutions"</span>]
+}</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 5: Multi-Turn Conversation Flow ── -->
+  <div class="slide">
+    <div class="badge">5 / 6</div>
+    <div class="slide-header">
+      <div class="eyebrow">Orchestration</div>
+      <h2>The orchestrator connects the model to all servers</h2>
+    </div>
+    <div class="slide-body">
+      <div class="cols cols-5-3">
+        <div class="vflow">
+          <div class="node">
+            User
+            <small>"Critical tickets for CUST-001?"</small>
+          </div>
+          <div class="stem down"></div>
+          <div class="node main">
+            Orchestrator → gpt-5-nano
+            <small>question + 20 tool definitions</small>
+          </div>
+          <div class="stem down"></div>
+          <div class="node">
+            gpt-5-nano decides
+            <small>search_tickets(customer_id="CUST-001", priority="critical")</small>
+          </div>
+          <div class="stem down"></div>
+          <div class="node main">
+            Orchestrator → ticket_server
+            <small>routes call, returns results</small>
+          </div>
+          <div class="stem down"></div>
+          <div class="node">
+            Final answer
+            <small>"CUST-001 has 2 critical tickets…"</small>
+          </div>
+        </div>
+        <div>
+          <p style="margin-bottom: 22px;">
+            <code style="background:#eff6ff; padding:3px 8px; border-radius:4px; color:#1d4ed8; font-family:monospace; font-size:16px;">MCPOrchestrator</code> in <code style="background:#eff6ff; padding:3px 8px; border-radius:4px; color:#1d4ed8; font-family:monospace; font-size:16px;">mcp_client.py</code> is custom code built on top of the MCP SDK. The SDK provides the low-level primitives. The orchestrator adds the coordination layer.
+          </p>
+          <ul class="check">
+            <li>Starts all 5 servers as subprocesses</li>
+            <li>Collects all 20 tool definitions at startup</li>
+            <li>Converts MCP schemas to OpenAI function format</li>
+            <li>Loops until the model produces a final answer</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 6: What We Built ── -->
+  <div class="slide">
+    <div class="badge">6 / 6</div>
+    <div class="slide-header">
+      <div class="eyebrow">What We Built</div>
+      <h2>Custom code vs. what the MCP SDK provides</h2>
+    </div>
+    <div class="slide-body">
+      <table>
+        <thead>
+          <tr>
+            <th>Component</th>
+            <th>File</th>
+            <th>Origin</th>
+            <th>What it does</th>
+            <th>Example</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>5 MCP servers</td>
+            <td><code>ticket_server.py …</code></td>
+            <td><span class="tag-custom">Custom</span></td>
+            <td>Tool definitions, business logic, structured error payloads</td>
+            <td>Small Python programs like "tickets" and "billing" that handle their domain's tasks</td>
+          </tr>
+          <tr>
+            <td>MCPOrchestrator</td>
+            <td><code>mcp_client.py</code></td>
+            <td><span class="tag-custom">Custom</span></td>
+            <td>Multi-server management, OpenAI format conversion, tool-calling loop</td>
+            <td>The middleman that hands questions to the AI and dispatches tool calls to the right server</td>
+          </tr>
+          <tr>
+            <td>Interactive client</td>
+            <td><code>interactive_client.py</code></td>
+            <td><span class="tag-custom">Custom</span></td>
+            <td>CLI chat interface on top of the orchestrator</td>
+            <td>The terminal chat where you type questions and read answers</td>
+          </tr>
+          <tr>
+            <td>ClientSession</td>
+            <td>mcp SDK</td>
+            <td><span class="tag-sdk">MCP SDK</span></td>
+            <td>Low-level client: sends requests, receives responses, manages session lifecycle</td>
+            <td>A phone line the orchestrator uses to talk to one specific server</td>
+          </tr>
+          <tr>
+            <td>stdio transport</td>
+            <td>mcp SDK</td>
+            <td><span class="tag-sdk">MCP SDK</span></td>
+            <td>Launches server subprocess, wires up stdin/stdout pipes</td>
+            <td>Starts each server as a child program, lets them talk through pipes</td>
+          </tr>
+          <tr>
+            <td>Server decorator API</td>
+            <td>mcp SDK</td>
+            <td><span class="tag-sdk">MCP SDK</span></td>
+            <td><code>@app.list_tools()</code> and <code>@app.call_tool()</code> wiring</td>
+            <td>A label you stick on a Python function to make it callable by the AI</td>
+          </tr>
+          <tr>
+            <td>JSON-RPC 2.0 wire format</td>
+            <td>mcp SDK</td>
+            <td><span class="tag-sdk">MCP SDK</span></td>
+            <td>Serialization, message routing, initialize handshake</td>
+            <td>Every message is a small JSON object like <code>{method: "tools/list", id: 1}</code> that both sides know how to read</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<nav>
+  <button id="prev" onclick="go(-1)" disabled>← Prev</button>
+  <span id="counter">1 / 6</span>
+  <button id="next" onclick="go(1)">Next →</button>
+</nav>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let cur = 0;
+  function go(dir) {
+    slides[cur].classList.remove('active');
+    cur = Math.max(0, Math.min(slides.length - 1, cur + dir));
+    slides[cur].classList.add('active');
+    document.getElementById('counter').textContent = (cur + 1) + ' / ' + slides.length;
+    document.getElementById('prev').disabled = cur === 0;
+    document.getElementById('next').disabled = cur === slides.length - 1;
+  }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   go(-1);
+  });
+</script>
+</body>
+</html>
