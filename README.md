@@ -411,7 +411,43 @@ jupyter notebook 2_MCP_resources_prompts_sampling.ipynb
 jupyter notebook 3_MCP_with_Local_Model.ipynb
 ```
 
-Runs on Google Colab with a free T4 GPU. No OpenAI API key needed.
+Notebook 3 supports two backends:
+- **Google Colab** with a free T4 GPU (loads Gemma 2 2B via Hugging Face)
+- **Local machine** via [Ollama](https://ollama.com/) (recommended if you don't want to use Colab)
+
+No OpenAI API key is needed for either path.
+
+#### Running Notebook 3 locally with Ollama
+
+1. **Install Ollama.** Download it from [ollama.com](https://ollama.com/) and start the app. On macOS it runs in the menu bar; on Linux/Windows follow the platform instructions. Ollama serves an HTTP API on `http://localhost:11434`.
+
+2. **Create a conda environment and install dependencies.**
+   ```bash
+   conda create -n mcp-tutorial python=3.11 -y
+   conda activate mcp-tutorial
+   pip install jupyter
+   pip install -r requirements.txt
+   ```
+   `requirements.txt` only contains what you need to run the notebooks locally. You do **not** need `transformers`, `torch`, `accelerate`, or `bitsandbytes` for the Ollama path — those are installed inline by Notebook 3 only when it detects it's running on Colab.
+
+3. **Verify Ollama is running.** In a terminal:
+   ```bash
+   curl http://localhost:11434/api/tags
+   ```
+   If Ollama is running, you'll get a JSON response (e.g. `{"models":[]}` if no models are pulled yet). If you get a connection error, open the Ollama app and try again.
+
+4. **Pull the model.**
+   ```bash
+   ollama pull gemma2:2b
+   ```
+
+5. **Start Jupyter from the project folder** (make sure the conda environment is activated, otherwise Jupyter won't find the installed packages):
+   ```bash
+   cd /path/to/MCP-tutorial
+   jupyter notebook 3_MCP_with_Local_Model.ipynb
+   ```
+
+When you run the backend-detection cell in the notebook, it should print `Backend detected: ollama` and the notebook will route all model calls through your local Ollama server.
 
 **What you'll learn:**
 - How to load Gemma 2 2B with 4-bit quantization

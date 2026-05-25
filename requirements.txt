@@ -1,9 +1,14 @@
 # MCP Tutorial Requirements
+#
+# These are the dependencies needed to run the notebooks locally.
+# If you run Notebook 3 on Google Colab, the Colab-specific packages
+# (transformers, torch, accelerate, bitsandbytes) are installed
+# inline by the notebook itself, so they are not listed here.
 
 # MCP SDK
 mcp==1.27.0
 
-# OpenAI API
+# OpenAI API (Notebooks 1 and 2)
 openai==2.30.0
 
 # Jupyter compatibility - allows nested event loops
@@ -12,10 +17,5 @@ nest-asyncio==1.6.0
 # Type hints support
 typing-extensions==4.13.2
 
-# Local Model Dependencies (for Notebook 3)
-# Note: These are tested versions for Google Colab with T4 GPU
-transformers==4.57.1
-torch==2.8.0
-torchvision==0.23.0
-accelerate==1.11.0
-bitsandbytes==0.48.1
+# HTTP client (used by Notebook 3 to call the local Ollama API)
+requests
