@@ -4,6 +4,8 @@ A hands-on demonstration of the **Model Context Protocol (MCP)** with 5 speciali
 
 Welcome to the Model Context Protocol (MCP) tutorial! This guide will teach you how to build a multi-server AI system using MCP, demonstrating real-world patterns for creating intelligent IT support applications.
 
+**Open in Colab:** each notebook has an "Open In Colab" badge at the top, so you can run it in the browser with a free Colab account instead of setting up a local environment. Notebook 3 needs a GPU runtime (Runtime > Change runtime type > T4 GPU) or a local Ollama install - see [Path 4](#path-4-local-open-source-model) below.
+
 ## What You'll Learn
 
 - How to build multi-server AI systems using MCP
