@@ -6,6 +6,20 @@ Provides tools for managing and tracking hardware/software assets
 import asyncio
 import json
 from datetime import datetime, timedelta
+
+# --- Relative mock dates ----------------------------------------------------
+# The mock data below uses dates computed relative to "today" so the demos
+# (time-window metrics, warranty checks, overdue calculations) keep working
+# correctly no matter when you run this tutorial.
+def _days_ago(days):
+    """ISO date string for `days` days before today."""
+    return (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+
+
+def _days_from_now(days):
+    """ISO date string for `days` days after today."""
+    return (datetime.now() + timedelta(days=days)).strftime("%Y-%m-%d")
+
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
@@ -39,11 +53,11 @@ ASSETS = [
         "model": "OptiPlex 7090",
         "status": "active",
         "location": "TechCorp HQ - Floor 3",
-        "purchase_date": "2024-01-15",
+        "purchase_date": _days_ago(629),
         "warranty": {
             "status": "active",
-            "start_date": "2024-01-15",
-            "end_date": "2027-01-15",
+            "start_date": _days_ago(629),
+            "end_date": _days_from_now(467),
             "coverage_type": "ProSupport Plus",
             "remaining_days": 450
         },
@@ -66,11 +80,11 @@ ASSETS = [
         "model": "ProLiant DL380 Gen10",
         "status": "active",
         "location": "DataFlow Data Center - Rack 12",
-        "purchase_date": "2023-06-20",
+        "purchase_date": _days_ago(838),
         "warranty": {
             "status": "active",
-            "start_date": "2023-06-20",
-            "end_date": "2026-06-20",
+            "start_date": _days_ago(838),
+            "end_date": _days_from_now(258),
             "coverage_type": "24x7 4-hour response",
             "remaining_days": 258
         },
@@ -101,11 +115,11 @@ ASSETS = [
         "model": "MacBook Pro 16-inch M3 Max",
         "status": "active",
         "location": "Remote - Executive",
-        "purchase_date": "2024-11-10",
+        "purchase_date": _days_ago(329),
         "warranty": {
             "status": "active",
-            "start_date": "2024-11-10",
-            "end_date": "2025-11-10",
+            "start_date": _days_ago(329),
+            "end_date": _days_from_now(36),
             "coverage_type": "AppleCare+",
             "remaining_days": 36
         },
@@ -128,11 +142,11 @@ ASSETS = [
         "model": "SuperServer 1029P",
         "status": "active",
         "location": "AWS us-east-1 (Virtual)",
-        "purchase_date": "2023-08-22",
+        "purchase_date": _days_ago(775),
         "warranty": {
             "status": "active",
-            "start_date": "2023-08-22",
-            "end_date": "2025-08-22",
+            "start_date": _days_ago(775),
+            "end_date": _days_from_now(320),
             "coverage_type": "Standard support",
             "remaining_days": -45
         },
@@ -163,11 +177,11 @@ ASSETS = [
         "model": "ThinkStation P620",
         "status": "active",
         "location": "CloudFirst - Development Lab",
-        "purchase_date": "2022-11-05",
+        "purchase_date": _days_ago(1065),
         "warranty": {
             "status": "expired",
-            "start_date": "2022-11-05",
-            "end_date": "2025-11-05",
+            "start_date": _days_ago(1065),
+            "end_date": _days_ago(120),
             "coverage_type": "Premier Support",
             "remaining_days": -31
         },
@@ -204,11 +218,11 @@ ASSETS = [
         "model": "Catalyst 9300-48P",
         "status": "active",
         "location": "SecureNet - Main IDF",
-        "purchase_date": "2024-06-01",
+        "purchase_date": _days_ago(491),
         "warranty": {
             "status": "active",
-            "start_date": "2024-06-01",
-            "end_date": "2027-06-01",
+            "start_date": _days_ago(491),
+            "end_date": _days_from_now(604),
             "coverage_type": "SMARTnet 8x5xNBD",
             "remaining_days": 604
         },
@@ -231,11 +245,11 @@ ASSETS = [
         "model": "ProLiant DL360 Gen10",
         "status": "active",
         "location": "MegaCorp HQ - Server Room A",
-        "purchase_date": "2022-03-10",
+        "purchase_date": _days_ago(1305),
         "warranty": {
             "status": "active",
-            "start_date": "2022-03-10",
-            "end_date": "2027-03-10",
+            "start_date": _days_ago(1305),
+            "end_date": _days_from_now(521),
             "coverage_type": "5-year 24x7 4-hour response",
             "remaining_days": 521
         },
@@ -272,11 +286,11 @@ ASSETS = [
         "model": "PowerEdge R740xd",
         "status": "active",
         "location": "MegaCorp HQ - Server Room B",
-        "purchase_date": "2023-07-15",
+        "purchase_date": _days_ago(813),
         "warranty": {
             "status": "active",
-            "start_date": "2023-07-15",
-            "end_date": "2026-07-15",
+            "start_date": _days_ago(813),
+            "end_date": _days_from_now(283),
             "coverage_type": "ProSupport Plus 24x7",
             "remaining_days": 283
         },
@@ -313,11 +327,11 @@ ASSETS = [
         "model": "PN64 Mini PC",
         "status": "active",
         "location": "StartupHub - Lobby",
-        "purchase_date": "2024-02-28",
+        "purchase_date": _days_ago(585),
         "warranty": {
             "status": "active",
-            "start_date": "2024-02-28",
-            "end_date": "2027-02-28",
+            "start_date": _days_ago(585),
+            "end_date": _days_from_now(511),
             "coverage_type": "3-year on-site",
             "remaining_days": 511
         },
@@ -340,11 +354,11 @@ ASSETS = [
         "model": "PowerEdge R650",
         "status": "active",
         "location": "Colocation - Digital Realty SJC",
-        "purchase_date": "2024-03-15",
+        "purchase_date": _days_ago(569),
         "warranty": {
             "status": "active",
-            "start_date": "2024-03-15",
-            "end_date": "2027-03-15",
+            "start_date": _days_ago(569),
+            "end_date": _days_from_now(526),
             "coverage_type": "ProSupport 24x7",
             "remaining_days": 526
         },
@@ -375,11 +389,11 @@ ASSETS = [
         "model": "RackStation RS2421+",
         "status": "active",
         "location": "DataFlow - Backup Room",
-        "purchase_date": "2023-09-10",
+        "purchase_date": _days_ago(756),
         "warranty": {
             "status": "active",
-            "start_date": "2023-09-10",
-            "end_date": "2026-09-10",
+            "start_date": _days_ago(756),
+            "end_date": _days_from_now(340),
             "coverage_type": "3-year warranty",
             "remaining_days": 340
         },
@@ -403,11 +417,11 @@ ASSETS = [
         "model": "Framework Laptop 13 (Intel 13th Gen)",
         "status": "active",
         "location": "Remote - Field Engineer",
-        "purchase_date": "2024-05-20",
+        "purchase_date": _days_ago(503),
         "warranty": {
             "status": "active",
-            "start_date": "2024-05-20",
-            "end_date": "2025-05-20",
+            "start_date": _days_ago(503),
+            "end_date": _days_from_now(21),
             "coverage_type": "Standard 1-year",
             "remaining_days": 7
         },

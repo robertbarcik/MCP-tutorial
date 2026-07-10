@@ -6,6 +6,20 @@ Provides tools for searching and managing support tickets
 import asyncio
 import json
 from datetime import datetime, timedelta
+
+# --- Relative mock dates ----------------------------------------------------
+# The mock data below uses dates computed relative to "today" so the demos
+# (time-window metrics, warranty checks, overdue calculations) keep working
+# correctly no matter when you run this tutorial.
+def _days_ago(days):
+    """ISO date string for `days` days before today."""
+    return (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+
+
+def _days_from_now(days):
+    """ISO date string for `days` days after today."""
+    return (datetime.now() + timedelta(days=days)).strftime("%Y-%m-%d")
+
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
@@ -39,8 +53,8 @@ TICKETS = [
         "category": "OS Issues",
         "os": "Windows 11",
         "assignee": "John Doe",
-        "created_date": "2025-10-01",
-        "last_updated": "2025-10-04",
+        "created_date": _days_ago(4),
+        "last_updated": _days_ago(1),
         "tags": ["bsod", "windows", "driver", "critical"]
     },
     {
@@ -53,8 +67,8 @@ TICKETS = [
         "category": "OS Issues",
         "os": "Linux",
         "assignee": "Jane Smith",
-        "created_date": "2025-10-02",
-        "last_updated": "2025-10-05",
+        "created_date": _days_ago(3),
+        "last_updated": _days_ago(0),
         "tags": ["linux", "disk-space", "logs", "urgent"]
     },
     {
@@ -67,8 +81,8 @@ TICKETS = [
         "category": "OS Issues",
         "os": "macOS",
         "assignee": "Bob Wilson",
-        "created_date": "2025-09-28",
-        "last_updated": "2025-10-03",
+        "created_date": _days_ago(7),
+        "last_updated": _days_ago(2),
         "resolution": "Reset SMC and NVRAM. Updated third-party kernel extensions.",
         "tags": ["macos", "kernel-panic", "sleep", "resolved"]
     },
@@ -82,8 +96,8 @@ TICKETS = [
         "category": "Network",
         "os": "Windows Server 2022",
         "assignee": "Sarah Lee",
-        "created_date": "2025-10-03",
-        "last_updated": "2025-10-05",
+        "created_date": _days_ago(2),
+        "last_updated": _days_ago(0),
         "tags": ["windows-server", "network", "performance"]
     },
     {
@@ -96,8 +110,8 @@ TICKETS = [
         "category": "Software",
         "os": "Ubuntu 24.04",
         "assignee": "Mike Chen",
-        "created_date": "2025-09-30",
-        "last_updated": "2025-10-01",
+        "created_date": _days_ago(5),
+        "last_updated": _days_ago(4),
         "resolution": "Updated sources.list to use correct mirror. Refreshed package cache.",
         "tags": ["linux", "apt", "package-management", "resolved"]
     },
@@ -111,8 +125,8 @@ TICKETS = [
         "category": "Storage",
         "os": "Windows 10",
         "assignee": "John Doe",
-        "created_date": "2025-10-04",
-        "last_updated": "2025-10-05",
+        "created_date": _days_ago(1),
+        "last_updated": _days_ago(0),
         "tags": ["windows", "filesystem", "ntfs", "performance"]
     },
     {
@@ -125,8 +139,8 @@ TICKETS = [
         "category": "Network",
         "os": "Debian 12",
         "assignee": "Jane Smith",
-        "created_date": "2025-10-05",
-        "last_updated": "2025-10-05",
+        "created_date": _days_ago(0),
+        "last_updated": _days_ago(0),
         "tags": ["linux", "ssh", "authentication", "performance"]
     },
     {
@@ -139,8 +153,8 @@ TICKETS = [
         "category": "Backup",
         "os": "macOS Ventura",
         "assignee": "Bob Wilson",
-        "created_date": "2025-10-01",
-        "last_updated": "2025-10-02",
+        "created_date": _days_ago(4),
+        "last_updated": _days_ago(3),
         "tags": ["macos", "backup", "time-machine", "nas"]
     },
     {
@@ -153,8 +167,8 @@ TICKETS = [
         "category": "Security",
         "os": "Windows 11",
         "assignee": "Sarah Lee",
-        "created_date": "2025-10-02",
-        "last_updated": "2025-10-05",
+        "created_date": _days_ago(3),
+        "last_updated": _days_ago(0),
         "tags": ["windows", "bitlocker", "encryption", "tpm"]
     },
     {
@@ -167,8 +181,8 @@ TICKETS = [
         "category": "Migration",
         "os": "CentOS 7",
         "assignee": "Mike Chen",
-        "created_date": "2025-09-25",
-        "last_updated": "2025-10-04",
+        "created_date": _days_ago(10),
+        "last_updated": _days_ago(1),
         "tags": ["linux", "migration", "centos", "eol"]
     },
     {
@@ -181,8 +195,8 @@ TICKETS = [
         "category": "Active Directory",
         "os": "Windows Server 2019",
         "assignee": "Sarah Lee",
-        "created_date": "2025-09-29",
-        "last_updated": "2025-09-30",
+        "created_date": _days_ago(6),
+        "last_updated": _days_ago(5),
         "resolution": "Forced replication sync. Fixed DNS entries for domain controllers. Replication now healthy.",
         "tags": ["windows-server", "active-directory", "replication", "resolved"]
     },
@@ -196,8 +210,8 @@ TICKETS = [
         "category": "Performance",
         "os": "Ubuntu 22.04",
         "assignee": "Mike Chen",
-        "created_date": "2025-10-04",
-        "last_updated": "2025-10-05",
+        "created_date": _days_ago(1),
+        "last_updated": _days_ago(0),
         "tags": ["linux", "cpu", "performance", "kworker"]
     },
     {
@@ -210,8 +224,8 @@ TICKETS = [
         "category": "Network",
         "os": "macOS Monterey",
         "assignee": "Bob Wilson",
-        "created_date": "2025-10-03",
-        "last_updated": "2025-10-04",
+        "created_date": _days_ago(2),
+        "last_updated": _days_ago(1),
         "tags": ["macos", "vpn", "ipsec", "dns"]
     },
     {
@@ -224,8 +238,8 @@ TICKETS = [
         "category": "OS Issues",
         "os": "Windows 11",
         "assignee": "John Doe",
-        "created_date": "2025-10-05",
-        "last_updated": "2025-10-05",
+        "created_date": _days_ago(0),
+        "last_updated": _days_ago(0),
         "tags": ["windows", "explorer", "taskbar", "gui"]
     },
     {
@@ -238,8 +252,8 @@ TICKETS = [
         "category": "Drivers",
         "os": "RHEL 9",
         "assignee": "Jane Smith",
-        "created_date": "2025-10-02",
-        "last_updated": "2025-10-05",
+        "created_date": _days_ago(3),
+        "last_updated": _days_ago(0),
         "tags": ["linux", "nvidia", "drivers", "kernel", "dkms"]
     }
 ]

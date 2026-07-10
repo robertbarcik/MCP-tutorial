@@ -6,6 +6,20 @@ Provides tools for accessing billing and payment information
 import asyncio
 import json
 from datetime import datetime, timedelta
+
+# --- Relative mock dates ----------------------------------------------------
+# The mock data below uses dates computed relative to "today" so the demos
+# (time-window metrics, warranty checks, overdue calculations) keep working
+# correctly no matter when you run this tutorial.
+def _days_ago(days):
+    """ISO date string for `days` days before today."""
+    return (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+
+
+def _days_from_now(days):
+    """ISO date string for `days` days after today."""
+    return (datetime.now() + timedelta(days=days)).strftime("%Y-%m-%d")
+
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
@@ -36,8 +50,8 @@ INVOICES = [
         "amount": 450.00,
         "currency": "USD",
         "status": "paid",
-        "issue_date": "2025-09-15",
-        "due_date": "2025-10-15",
+        "issue_date": _days_ago(20),
+        "due_date": _days_from_now(10),
         "paid_date": "2025-09-20",
         "description": "Premium support - Windows BSOD investigation and resolution",
         "line_items": [
@@ -51,8 +65,8 @@ INVOICES = [
         "amount": 850.00,
         "currency": "USD",
         "status": "pending",
-        "issue_date": "2025-10-01",
-        "due_date": "2025-10-31",
+        "issue_date": _days_ago(4),
+        "due_date": _days_from_now(26),
         "paid_date": None,
         "description": "Critical incident - Linux server disk space emergency response",
         "line_items": [
@@ -67,8 +81,8 @@ INVOICES = [
         "amount": 300.00,
         "currency": "USD",
         "status": "paid",
-        "issue_date": "2025-09-28",
-        "due_date": "2025-10-28",
+        "issue_date": _days_ago(7),
+        "due_date": _days_from_now(23),
         "paid_date": "2025-10-02",
         "description": "macOS kernel panic diagnosis and fix",
         "line_items": [
@@ -82,8 +96,8 @@ INVOICES = [
         "amount": 600.00,
         "currency": "USD",
         "status": "pending",
-        "issue_date": "2025-10-03",
-        "due_date": "2025-11-02",
+        "issue_date": _days_ago(2),
+        "due_date": _days_from_now(28),
         "paid_date": None,
         "description": "Network performance troubleshooting - Windows Server",
         "line_items": [
@@ -97,8 +111,8 @@ INVOICES = [
         "amount": 200.00,
         "currency": "USD",
         "status": "paid",
-        "issue_date": "2025-09-30",
-        "due_date": "2025-10-30",
+        "issue_date": _days_ago(5),
+        "due_date": _days_from_now(25),
         "paid_date": "2025-10-01",
         "description": "Ubuntu repository configuration fix",
         "line_items": [
@@ -112,8 +126,8 @@ INVOICES = [
         "amount": 500.00,
         "currency": "USD",
         "status": "pending",
-        "issue_date": "2025-10-04",
-        "due_date": "2025-11-03",
+        "issue_date": _days_ago(1),
+        "due_date": _days_from_now(29),
         "paid_date": None,
         "description": "Windows filesystem troubleshooting - ongoing",
         "line_items": [
@@ -127,8 +141,8 @@ INVOICES = [
         "amount": 350.00,
         "currency": "USD",
         "status": "overdue",
-        "issue_date": "2025-09-05",
-        "due_date": "2025-10-05",
+        "issue_date": _days_ago(30),
+        "due_date": _days_ago(0),
         "paid_date": None,
         "description": "SSH performance optimization - Debian server",
         "line_items": [
@@ -142,8 +156,8 @@ INVOICES = [
         "amount": 150.00,
         "currency": "USD",
         "status": "pending",
-        "issue_date": "2025-10-01",
-        "due_date": "2025-10-31",
+        "issue_date": _days_ago(4),
+        "due_date": _days_from_now(26),
         "paid_date": None,
         "description": "macOS Time Machine backup troubleshooting",
         "line_items": [
@@ -157,8 +171,8 @@ INVOICES = [
         "amount": 750.00,
         "currency": "USD",
         "status": "pending",
-        "issue_date": "2025-10-02",
-        "due_date": "2025-11-01",
+        "issue_date": _days_ago(3),
+        "due_date": _days_from_now(27),
         "paid_date": None,
         "description": "Critical BitLocker recovery - Windows 11",
         "line_items": [
@@ -173,8 +187,8 @@ INVOICES = [
         "amount": 1500.00,
         "currency": "USD",
         "status": "pending",
-        "issue_date": "2025-09-25",
-        "due_date": "2025-10-25",
+        "issue_date": _days_ago(10),
+        "due_date": _days_from_now(20),
         "paid_date": None,
         "description": "CentOS migration planning and consultation",
         "line_items": [
@@ -189,8 +203,8 @@ INVOICES = [
         "amount": 900.00,
         "currency": "USD",
         "status": "paid",
-        "issue_date": "2025-09-29",
-        "due_date": "2025-10-29",
+        "issue_date": _days_ago(6),
+        "due_date": _days_from_now(24),
         "paid_date": "2025-09-30",
         "description": "Active Directory replication fix - critical",
         "line_items": [
@@ -204,8 +218,8 @@ INVOICES = [
         "amount": 400.00,
         "currency": "USD",
         "status": "pending",
-        "issue_date": "2025-10-04",
-        "due_date": "2025-11-03",
+        "issue_date": _days_ago(1),
+        "due_date": _days_from_now(29),
         "paid_date": None,
         "description": "Ubuntu high CPU investigation - ongoing",
         "line_items": [
@@ -219,8 +233,8 @@ INVOICES = [
         "amount": 2500.00,
         "currency": "USD",
         "status": "paid",
-        "issue_date": "2024-12-01",
-        "due_date": "2024-12-31",
+        "issue_date": _days_ago(308),
+        "due_date": _days_ago(278),
         "paid_date": "2024-12-15",
         "description": "Monthly premium support retainer - December 2024",
         "line_items": [
@@ -234,8 +248,8 @@ INVOICES = [
         "amount": 1800.00,
         "currency": "USD",
         "status": "overdue",
-        "issue_date": "2024-11-15",
-        "due_date": "2024-12-15",
+        "issue_date": _days_ago(324),
+        "due_date": _days_ago(294),
         "paid_date": None,
         "description": "Quarterly infrastructure review - Q4 2024",
         "line_items": [
@@ -249,8 +263,8 @@ INVOICES = [
         "amount": 275.00,
         "currency": "USD",
         "status": "pending",
-        "issue_date": "2025-10-05",
-        "due_date": "2025-11-04",
+        "issue_date": _days_ago(0),
+        "due_date": _days_from_now(30),
         "paid_date": None,
         "description": "Windows 11 taskbar troubleshooting",
         "line_items": [
