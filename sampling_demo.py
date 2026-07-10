@@ -270,7 +270,7 @@ async def simulate_sampling(prompt: str) -> str:
     try:
         client = OpenAI(api_key=api_key)
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-5-nano",
             messages=[
                 {"role": "system", "content": "You are a financial analyst providing insights on spending patterns."},
                 {"role": "user", "content": prompt}
