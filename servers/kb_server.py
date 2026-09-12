@@ -1,32 +1,24 @@
 """
-Knowledge Base MCP Server
-Provides tools for searching and accessing knowledge base articles and solutions
+Knowledge base server for the IT help desk: troubleshooting articles.
+
+Same four parts as every server in this course:
+  1. DATA  2. PRIVATE HELPERS  3. TOOLS (plain functions)  4. MCP LAYER
+
+Run:    python servers/kb_server.py [--http]
+Import: from servers.kb_server import search_solutions
 """
 
-import asyncio
-import json
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
+import sys
+from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+from common import READ_ONLY, days_ago, make_error
+from mcp.server import MCPServer
 
-def make_error(message, *, reason=None, hints=None, retryable=False, follow_up_tools=None, **extra):
-    """Return a structured error payload for LLM consumption."""
-    payload = {"error": message}
-    if reason:
-        payload["reason"] = reason
-    if hints:
-        payload["suggested_actions"] = hints
-    payload["retryable"] = retryable
-    if follow_up_tools:
-        payload["follow_up_tools"] = follow_up_tools
-    for key, value in extra.items():
-        if value is not None:
-            payload[key] = value
-    return payload
+# =============================================================================
+# 1. DATA
+# =============================================================================
 
-
-# Sample knowledge base articles
 KB_ARTICLES = [
     {
         "article_id": "KB-001",
@@ -55,7 +47,7 @@ KB_ARTICLES = [
 """,
         "tags": ["windows", "bsod", "driver", "critical", "blue-screen"],
         "related_products": ["Windows 10", "Windows 11", "Windows Server"],
-        "last_updated": "2025-09-15",
+        "last_updated": days_ago(25),
         "views": 1523,
         "helpful_count": 142
     },
@@ -91,7 +83,7 @@ Edit /etc/logrotate.conf:
 """,
         "tags": ["linux", "disk-space", "logs", "logrotate", "administration"],
         "related_products": ["Ubuntu", "Debian", "CentOS", "RHEL"],
-        "last_updated": "2025-10-01",
+        "last_updated": days_ago(9),
         "views": 2341,
         "helpful_count": 203
     },
@@ -102,7 +94,7 @@ Edit /etc/logrotate.conf:
         "content": """
 # Diagnosing Kernel Panics
 
-1. Check panic logs: Console.app → System Reports
+1. Check panic logs: Console.app -> System Reports
 2. Identify panic pattern (wake from sleep, specific app, etc.)
 3. Note error codes and responsible processes
 
@@ -130,7 +122,7 @@ sudo kextcache -i /
 """,
         "tags": ["macos", "kernel-panic", "troubleshooting", "smc", "nvram"],
         "related_products": ["macOS Sonoma", "macOS Ventura", "macOS Monterey"],
-        "last_updated": "2025-09-28",
+        "last_updated": days_ago(12),
         "views": 987,
         "helpful_count": 88
     },
@@ -142,8 +134,8 @@ sudo kextcache -i /
 # Diagnosing Slow Network Performance
 
 ## Check Network Adapter Settings
-1. Device Manager → Network Adapters
-2. Properties → Advanced
+1. Device Manager -> Network Adapters
+2. Properties -> Advanced
 3. Verify settings:
    - Speed & Duplex: Auto Negotiation
    - Flow Control: Enabled
@@ -159,8 +151,8 @@ iperf3 -c server-ip -t 60
 ```
 
 ## Check for Bandwidth Hogs
-- Resource Monitor → Network tab
-- Performance Monitor → Network Interface counters
+- Resource Monitor -> Network tab
+- Performance Monitor -> Network Interface counters
 
 ## Common Issues
 - RSS (Receive Side Scaling) misconfiguration
@@ -170,7 +162,7 @@ iperf3 -c server-ip -t 60
 """,
         "tags": ["windows-server", "network", "performance", "troubleshooting"],
         "related_products": ["Windows Server 2019", "Windows Server 2022"],
-        "last_updated": "2025-10-03",
+        "last_updated": days_ago(7),
         "views": 1654,
         "helpful_count": 156
     },
@@ -216,7 +208,7 @@ sudo dpkg --configure -a
 """,
         "tags": ["linux", "ubuntu", "apt", "package-management", "troubleshooting"],
         "related_products": ["Ubuntu 22.04", "Ubuntu 24.04", "Debian"],
-        "last_updated": "2025-09-30",
+        "last_updated": days_ago(10),
         "views": 3210,
         "helpful_count": 287
     },
@@ -259,7 +251,7 @@ sfc /scannow
 """,
         "tags": ["windows", "ntfs", "filesystem", "corruption", "chkdsk"],
         "related_products": ["Windows 10", "Windows 11", "Windows Server"],
-        "last_updated": "2025-10-04",
+        "last_updated": days_ago(6),
         "views": 1876,
         "helpful_count": 165
     },
@@ -313,7 +305,7 @@ Look for delays in output
 """,
         "tags": ["linux", "ssh", "authentication", "performance", "network"],
         "related_products": ["Debian", "Ubuntu", "CentOS", "RHEL"],
-        "last_updated": "2025-10-05",
+        "last_updated": days_ago(5),
         "views": 1432,
         "helpful_count": 128
     },
@@ -351,7 +343,7 @@ manage-bde -protectors -add C: -tpm
 ```powershell
 manage-bde -protectors -get C:
 # Save to file
-manage-bde -protectors -get C: > C:\bitlocker-key.txt
+manage-bde -protectors -get C: > C:\\bitlocker-key.txt
 ```
 
 ## Verify TPM Status
@@ -366,7 +358,7 @@ Get-Tpm
 """,
         "tags": ["windows", "bitlocker", "encryption", "tpm", "security"],
         "related_products": ["Windows 10", "Windows 11"],
-        "last_updated": "2025-10-02",
+        "last_updated": days_ago(8),
         "views": 2103,
         "helpful_count": 189
     },
@@ -420,7 +412,7 @@ repadmin /replicate DC2 DC1 DC=domain,DC=com
 """,
         "tags": ["active-directory", "windows-server", "replication", "dcdiag"],
         "related_products": ["Windows Server 2016", "Windows Server 2019", "Windows Server 2022"],
-        "last_updated": "2025-09-29",
+        "last_updated": days_ago(11),
         "views": 1765,
         "helpful_count": 172
     },
@@ -490,80 +482,68 @@ dmesg | grep workqueue
 """,
         "tags": ["linux", "cpu", "performance", "kworker", "kernel"],
         "related_products": ["Ubuntu", "Debian", "CentOS", "RHEL"],
-        "last_updated": "2025-10-04",
+        "last_updated": days_ago(6),
         "views": 1543,
         "helpful_count": 134
     }
 ]
 
+# =============================================================================
+# 2. PRIVATE HELPERS
+# =============================================================================
+
+def _find_article(article_id):
+    return next((a for a in KB_ARTICLES if a["article_id"] == article_id), None)
 
 
-
-# ============================================================================
-# REGULAR PYTHON FUNCTIONS - Can be called directly without MCP
-# ============================================================================
-
-def search_solutions(query, category=None, limit=10):
-    """Search KB articles. Can be called directly."""
-    search_results = search_articles(query, category, limit)
-    return {
-        "query": query, "category": category,
-        "results": [{"article_id": r["article"]["article_id"], "title": r["article"]["title"], "category": r["article"]["category"], "relevance_score": r["relevance_score"], "tags": r["article"]["tags"], "views": r["article"]["views"], "helpful_count": r["article"]["helpful_count"]} for r in search_results],
-        "total_count": len(search_results)
-    }
-
-
-def get_article(article_id):
-    """Get full article content. Can be called directly."""
-    article = next((a for a in KB_ARTICLES if a["article_id"] == article_id), None)
-    if not article:
-        return make_error(
-            f"Article {article_id} not found",
-            reason="The knowledge base does not include that article_id.",
-            hints=[
-                "Call search_solutions with keywords related to the issue.",
-                "Use find_related_articles starting from a known article to explore similar topics."
-            ],
-            retryable=True,
-            follow_up_tools=["search_solutions", "find_related_articles"],
-            article_id=article_id
-        )
-    return article.copy()
+def _search_articles(query, category=None, limit=10):
+    """Keyword search over title, tags, content and category; higher score = better match."""
+    results = []
+    query_lower = query.lower() if query else ""
+    for article in KB_ARTICLES:
+        if category and article["category"].lower() != category.lower():
+            continue
+        score = 0
+        if query_lower in article["title"].lower():
+            score += 10
+        for tag in article["tags"]:
+            if query_lower in tag.lower():
+                score += 5
+        if query_lower in article["content"].lower():
+            score += 3
+        if query_lower in article["category"].lower():
+            score += 4
+        if score > 0:
+            results.append({"article": article, "relevance_score": score})
+    results.sort(key=lambda x: x["relevance_score"], reverse=True)
+    return results[:limit]
 
 
-def find_related_articles(article_id=None, topic=None, limit=5):
-    """Find related articles. Can be called directly."""
-    related = find_related(article_id, topic, limit)
-    if article_id and not related and not any(a["article_id"] == article_id for a in KB_ARTICLES):
-        return make_error(
-            f"Article {article_id} not found",
-            reason="Cannot recommend related content because the source article does not exist.",
-            hints=[
-                "Run search_solutions using the article topic to find existing entries.",
-                "Confirm the article_id format (e.g., KB-001)."
-            ],
-            retryable=True,
-            follow_up_tools=["search_solutions"],
-            article_id=article_id
-        )
-    return {
-        "article_id": article_id, "topic": topic,
-        "related_articles": [{"article_id": r["article"]["article_id"], "title": r["article"]["title"], "category": r["article"]["category"], "relevance_score": r["relevance_score"], "common_tags": r.get("common_tags", [])} for r in related],
-        "total_found": len(related)
-    }
+def _find_related(article_id=None, topic=None, limit=5):
+    """Articles sharing tags or category with a reference article, or a topic search."""
+    if article_id:
+        reference = _find_article(article_id)
+        if not reference:
+            return []
+        ref_tags = set(reference["tags"])
+        related = []
+        for article in KB_ARTICLES:
+            if article["article_id"] == article_id:
+                continue
+            common_tags = set(article["tags"]) & ref_tags
+            score = len(common_tags) * 3
+            if article["category"] == reference["category"]:
+                score += 5
+            if score > 0:
+                related.append({"article": article, "relevance_score": score, "common_tags": list(common_tags)})
+        related.sort(key=lambda x: x["relevance_score"], reverse=True)
+        return related[:limit]
+    if topic:
+        return _search_articles(topic, limit=limit)
+    return []
 
 
-def get_common_fixes(product=None, issue_type=None):
-    """Get common fixes for product/issue. Can be called directly."""
-    fixes = get_common_fixes_internal(product, issue_type)
-    return {
-        "product": product, "issue_type": issue_type,
-        "common_fixes": [{"article_id": f["article"]["article_id"], "title": f["article"]["title"], "category": f["article"]["category"], "relevance_score": f["relevance_score"], "helpful_count": f["article"]["helpful_count"], "tags": f["article"]["tags"]} for f in fixes],
-        "total_found": len(fixes)
-    }
-
-# Rename internal helper to avoid conflict
-def get_common_fixes_internal(product=None, issue_type=None):
+def _score_common_fixes(product=None, issue_type=None):
     results = []
     for article in KB_ARTICLES:
         score = 0
@@ -584,175 +564,105 @@ def get_common_fixes_internal(product=None, issue_type=None):
     return results[:10]
 
 
-# ============================================================================
-# MCP SERVER SETUP
-# ============================================================================
+def _summary(entry, extra=()):
+    a = entry["article"]
+    out = {"article_id": a["article_id"], "title": a["title"], "category": a["category"],
+           "relevance_score": entry["relevance_score"], "tags": a["tags"], "helpful_count": a["helpful_count"]}
+    for key in extra:
+        out[key] = entry.get(key, [])
+    return out
 
-# Initialize the MCP server
-app = Server("knowledge-base-server")
+# =============================================================================
+# 3. TOOLS - plain Python functions, importable without MCP
+# =============================================================================
 
+def search_solutions(query: str, category: str | None = None, limit: int = 10) -> dict:
+    """Search the knowledge base by keyword. An empty result is normal: it means no
+    article matches, so try a different or shorter keyword.
 
-# Helper functions
-def search_articles(query, category=None, limit=10):
-    """Search articles by keyword in title, content, and tags"""
-    results = []
-    query_lower = query.lower() if query else ""
-
-    for article in KB_ARTICLES:
-        score = 0
-
-        # Search in title (highest weight)
-        if query_lower in article["title"].lower():
-            score += 10
-
-        # Search in tags
-        for tag in article["tags"]:
-            if query_lower in tag.lower():
-                score += 5
-
-        # Search in content
-        if query_lower in article["content"].lower():
-            score += 3
-
-        # Search in category
-        if query_lower in article["category"].lower():
-            score += 4
-
-        # Apply category filter
-        if category and article["category"].lower() != category.lower():
-            continue
-
-        if score > 0:
-            results.append({
-                "article": article,
-                "relevance_score": score
-            })
-
-    # Sort by relevance and limit results
-    results.sort(key=lambda x: x["relevance_score"], reverse=True)
-    return results[:limit]
+    Args:
+        query: keyword or phrase (e.g. "bsod", "ssh", "disk space")
+        category: optional exact category filter (e.g. "Linux Administration")
+        limit: maximum number of results
+    """
+    results = _search_articles(query, category, int(limit))
+    return {"query": query, "category": category, "results": [_summary(r) for r in results], "total_count": len(results)}
 
 
-def find_related(article_id=None, topic=None, limit=5):
-    """Find related articles based on tags and category"""
-    if article_id:
-        reference = next((a for a in KB_ARTICLES if a["article_id"] == article_id), None)
-        if not reference:
-            return []
+def get_article(article_id: str) -> dict:
+    """The full text of one knowledge base article.
 
-        ref_tags = set(reference["tags"])
-        ref_category = reference["category"]
-
-        related = []
-        for article in KB_ARTICLES:
-            if article["article_id"] == article_id:
-                continue
-
-            score = 0
-            common_tags = set(article["tags"]) & ref_tags
-            score += len(common_tags) * 3
-
-            if article["category"] == ref_category:
-                score += 5
-
-            if score > 0:
-                related.append({
-                    "article": article,
-                    "relevance_score": score,
-                    "common_tags": list(common_tags)
-                })
-
-        related.sort(key=lambda x: x["relevance_score"], reverse=True)
-        return related[:limit]
-
-    elif topic:
-        return search_articles(topic, limit=limit)
-
-    return []
-
-
-
-
-@app.list_tools()
-async def list_tools() -> list[Tool]:
-    """List available knowledge base tools"""
-    return [
-        Tool(
-            name="search_solutions",
-            description="Search knowledge base for solutions and articles by keyword or topic",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "Search query or keywords"},
-                    "category": {"type": "string", "description": "Article category filter"},
-                    "limit": {"type": "number", "description": "Maximum number of results to return"}
-                },
-                "required": ["query"]
-            }
-        ),
-        Tool(
-            name="get_article",
-            description="Retrieve the full content of a knowledge base article by ID",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "article_id": {"type": "string", "description": "Unique article identifier"}
-                },
-                "required": ["article_id"]
-            }
-        ),
-        Tool(
-            name="find_related_articles",
-            description="Find articles related to a given article or topic",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "article_id": {"type": "string", "description": "Reference article ID"},
-                    "topic": {"type": "string", "description": "Topic to find related articles for"},
-                    "limit": {"type": "number", "description": "Maximum number of related articles"}
-                }
-            }
-        ),
-        Tool(
-            name="get_common_fixes",
-            description="Get a list of common fixes and solutions for a specific product or issue type",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "product": {"type": "string", "description": "Product name or identifier"},
-                    "issue_type": {"type": "string", "description": "Type of issue (e.g., 'bsod', 'network', 'performance')"}
-                }
-            }
+    Args:
+        article_id: unique article identifier (e.g. KB-001)
+    """
+    article = _find_article(article_id)
+    if not article:
+        return make_error(
+            f"Article {article_id} not found",
+            reason="The knowledge base does not include that article_id.",
+            hints=[
+                "Call search_solutions with keywords related to the issue.",
+                "Use find_related_articles starting from a known article to explore similar topics."
+            ],
+            retryable=True,
+            follow_up_tools=["search_solutions", "find_related_articles"],
+            article_id=article_id
         )
-    ]
+    return dict(article)
 
 
-@app.call_tool()
-async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-    """Handle tool calls - delegates to regular Python functions"""
-    if name == "search_solutions":
-        result = search_solutions(arguments.get("query"), arguments.get("category"), int(arguments.get("limit", 10)))
-    elif name == "get_article":
-        result = get_article(arguments.get("article_id"))
-    elif name == "find_related_articles":
-        result = find_related_articles(arguments.get("article_id"), arguments.get("topic"), int(arguments.get("limit", 5)))
-    elif name == "get_common_fixes":
-        result = get_common_fixes(arguments.get("product"), arguments.get("issue_type"))
-    else:
-        raise ValueError(f"Unknown tool: {name}")
-    return [TextContent(type="text", text=json.dumps(result, indent=2))]
+def find_related_articles(article_id: str | None = None, topic: str | None = None, limit: int = 5) -> dict:
+    """Articles related to a given article (shared tags or category) or to a topic.
 
-
-
-async def main():
-    """Run the knowledge base server using stdio transport"""
-    async with stdio_server() as (read_stream, write_stream):
-        await app.run(
-            read_stream,
-            write_stream,
-            app.create_initialization_options()
+    Args:
+        article_id: reference article (e.g. KB-001)
+        topic: free-text topic if you have no article ID
+        limit: maximum number of related articles
+    """
+    related = _find_related(article_id, topic, int(limit))
+    if article_id and not related and not _find_article(article_id):
+        return make_error(
+            f"Article {article_id} not found",
+            reason="Cannot recommend related content because the source article does not exist.",
+            hints=[
+                "Run search_solutions using the article topic to find existing entries.",
+                "Confirm the article_id format (e.g., KB-001)."
+            ],
+            retryable=True,
+            follow_up_tools=["search_solutions"],
+            article_id=article_id
         )
+    return {
+        "article_id": article_id, "topic": topic,
+        "related_articles": [_summary(r, extra=("common_tags",)) for r in related],
+        "total_found": len(related)
+    }
 
+
+def get_common_fixes(product: str | None = None, issue_type: str | None = None) -> dict:
+    """The most helpful articles for a product and/or an issue type.
+
+    Args:
+        product: product name (e.g. "Windows 11", "Ubuntu")
+        issue_type: kind of problem (e.g. "bsod", "network", "performance")
+    """
+    fixes = _score_common_fixes(product, issue_type)
+    return {"product": product, "issue_type": issue_type, "common_fixes": [_summary(f) for f in fixes], "total_found": len(fixes)}
+
+# =============================================================================
+# 4. MCP LAYER - the only part of this file that knows MCP exists
+# =============================================================================
+# Never print() in a server: on stdio, stdout IS the wire to the client.
+
+mcp = MCPServer("knowledge-base")
+
+mcp.tool(annotations=READ_ONLY)(search_solutions)
+mcp.tool(annotations=READ_ONLY)(get_article)
+mcp.tool(annotations=READ_ONLY)(find_related_articles)
+mcp.tool(annotations=READ_ONLY)(get_common_fixes)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    if "--http" in sys.argv:
+        mcp.run(transport="streamable-http", host="127.0.0.1", port=8000)
+    else:
+        mcp.run()

@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "tickets":        {"command": "python", "args": ["servers/ticket_server.py"]},
+    "customers":      {"command": "python", "args": ["servers/customer_server.py"]},
+    "billing":        {"command": "python", "args": ["servers/billing_server.py"]},
+    "knowledge-base": {"command": "python", "args": ["servers/kb_server.py"]},
+    "assets":         {"command": "python", "args": ["servers/asset_server.py"]},
+    "hr":             {"command": "python", "args": ["servers/hr_server.py"]}
+  }
+}

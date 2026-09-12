@@ -1,21 +1,15 @@
-# MCP Tutorial Requirements
+# MCP course: one requirements file for a local setup (Python 3.10 or newer; tested on 3.12).
 #
-# These are the dependencies needed to run the notebooks locally.
-# If you run Notebook 3 on Google Colab, the Colab-specific packages
-# (transformers, torch, accelerate, bitsandbytes) are installed
-# inline by the notebook itself, so they are not listed here.
+# Google Colab users do NOT need this: the notebook installs the same pins in its first cell.
+#
+#   python3 -m venv .venv
+#   source .venv/bin/activate        # Windows: .venv\Scripts\activate
+#   pip install -r requirements.txt
+#   export OPENAI_API_KEY="sk-..."
+#
+# Pinned to the exact versions the notebook was executed with (September 2026).
+mcp==2.2.0          # Model Context Protocol SDK, 2.x line (spec 2026-07-28)
+openai==3.13.0      # OpenAI SDK, Responses API
 
-# MCP SDK
-mcp==1.27.0
-
-# OpenAI API (Notebooks 1 and 2)
-openai==2.30.0
-
-# Jupyter compatibility - allows nested event loops
-nest-asyncio==1.6.0
-
-# Type hints support
-typing-extensions==4.13.2
-
-# HTTP client (used by Notebook 3 to call the local Ollama API)
-requests
+# Only for running the notebook locally (Colab has this preinstalled):
+jupyter

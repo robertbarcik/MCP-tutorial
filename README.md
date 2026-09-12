@@ -1,1048 +1,424 @@
-# MCP Tutorial - Multi-Server IT Support System
+# MCP Course: One Server, Any Agent
 
-A hands-on demonstration of the **Model Context Protocol (MCP)** with 5 specialized servers orchestrated by OpenAI gpt-5-nano.
+A hands-on course on the **Model Context Protocol (MCP)**: how to expose your own Python functions to any AI application, how to be the client yourself, what travels on the wire, and how to plug a server into Claude Code, Claude Desktop or an agent framework.
 
-Welcome to the Model Context Protocol (MCP) tutorial! This guide will teach you how to build a multi-server AI system using MCP, demonstrating real-world patterns for creating intelligent IT support applications.
+The course is one notebook, **`MCP_course.ipynb`**, read top to bottom. This README is the textbook version of it: the same material, written to be re-read later.
 
-**Open in Colab:** each notebook has an "Open In Colab" badge at the top, so you can run it in the browser with a free Colab account instead of setting up a local environment. Notebook 3 needs a GPU runtime (Runtime > Change runtime type > T4 GPU) or a local Ollama install - see [Path 4](#path-4-local-open-source-model) below.
+**Open in Colab:** [MCP_course.ipynb](https://colab.research.google.com/github/robertbarcik/MCP-tutorial/blob/main/MCP_course.ipynb). The first cells install the packages and clone this repository into the Colab session; you need an OpenAI API key (Colab secret `OPENAI_API_KEY`).
 
-## What You'll Learn
-
-- How to build multi-server AI systems using MCP
-- OpenAI function calling integration
-- Server orchestration and tool discovery
-- Natural language queries across multiple data sources
+Built and verified in September 2026 on `mcp==2.2.0` (MCP specification 2026-07-28), `openai==3.13.0` and the model `gpt-5.6-luna`.
 
 ---
 
-## Quick Start
+## Contents
 
-### 1. Install Dependencies
+1. [What MCP is, in two sentences](#what-mcp-is-in-two-sentences)
+2. [When to use MCP, and when a CLI is enough](#when-to-use-mcp-and-when-a-cli-is-enough)
+3. [Quick start](#quick-start)
+4. [Repository layout](#repository-layout)
+5. [The story: an IT help desk with five servers](#the-story-an-it-help-desk-with-five-servers)
+6. [Anatomy of a server](#anatomy-of-a-server)
+7. [Errors are written for the model](#errors-are-written-for-the-model)
+8. [Tool annotations](#tool-annotations)
+9. [Being the client](#being-the-client)
+10. [What goes over the wire](#what-goes-over-the-wire)
+11. [MCP Inspector](#mcp-inspector)
+12. [Letting a model drive the server](#letting-a-model-drive-the-server)
+13. [Plugging into hosts](#plugging-into-hosts)
+14. [Resources and prompts](#resources-and-prompts)
+15. [Beyond your laptop: transports, authentication, trust](#beyond-your-laptop-transports-authentication-trust)
+16. [Example questions](#example-questions)
+17. [Troubleshooting](#troubleshooting)
+18. [What changed since the 2025 version of this course](#what-changed-since-the-2025-version-of-this-course)
+19. [Exercise and further reading](#exercise-and-further-reading)
+
+---
+
+## What MCP is, in two sentences
+
+MCP is an agreed way for a program that owns data or functions (a **server**) to describe them and serve them to any AI application (a **client**). The client asks two questions, *what tools do you have?* and *run this one for me*, and everything else is built on top of those two.
+
+A **server** waits to be asked; it does nothing on its own. A **client** is the program that asks: Claude Code, Claude Desktop, an agent framework, or a script you write. The words say nothing about where the programs run.
+
+## When to use MCP, and when a CLI is enough
+
+If you control both sides and the consumer is a coding agent on your own machine, a command-line tool with good documentation usually beats an MCP server. The agent reads the help text, runs the command, reads the output. A server adds a layer and takes nothing away.
+
+Use MCP when at least one of these holds:
+
+- **You do not control the client.** Colleagues on Claude.ai, ChatGPT or Copilot cannot run your script; they can connect to your server.
+- **The user should not have a shell.** A company wants its ticket system reachable by agents, but only through a handful of vetted functions, behind a login, with every call logged.
+- **Many people share one server.** It runs centrally; nobody installs anything.
+
+Rule of thumb: MCP is for the boundary between you and someone else's agent.
+
+## Quick start
+
+Local machine (Python 3.10 or newer; tested on 3.12):
 
 ```bash
+git clone https://github.com/robertbarcik/MCP-tutorial
+cd MCP-tutorial
+python3 -m venv .venv
+source .venv/bin/activate            # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+export OPENAI_API_KEY="sk-..."       # Windows: set OPENAI_API_KEY=sk-...
+
+jupyter lab MCP_course.ipynb         # the course
+python client/interactive_client.py  # chat with all five servers in the terminal
 ```
 
-### 2. Set OpenAI API Key
+Google Colab: open the badge at the top; the notebook installs and clones everything itself.
 
-```bash
-export OPENAI_API_KEY="sk-your-key-here"
-```
+The ADK course (the follow-up) pins an older MCP client library (`mcp<2`). Keep the two courses in two virtual environments; a 2.x server such as the ones here works fine with that older client.
 
-### 3. Try It Out
-
-**Interactive Chat (Recommended):**
-```bash
-python interactive_client.py
-```
-
-Ask questions like:
-- "What are all the critical priority tickets?"
-- "Show me customer CUST-001's information and SLA terms"
-- "Which assets have expired warranties?"
-
-**Jupyter Notebooks:**
-```bash
-# Basic tutorial - Tools and multi-server orchestration
-jupyter notebook 1_MCP_Demo.ipynb
-
-# Advanced features - Resources, Prompts, and Sampling
-jupyter notebook 2_MCP_resources_prompts_sampling.ipynb
-
-# Local model - Gemma 2 2B on Google Colab T4 GPU
-jupyter notebook 3_MCP_with_Local_Model.ipynb
-```
-
-**Test Server Startup:**
-```bash
-python mcp_client.py
-```
-
-**Advanced Sampling Demo:**
-```bash
-python sampling_demo.py --demo
-```
-
----
-
-## Table of Contents
-
-1. [What is MCP?](#what-is-mcp)
-2. [System Architecture](#system-architecture)
-3. [Repository Structure](#repository-structure)
-4. [Getting Started](#getting-started)
-5. [Learning Paths](#learning-paths)
-6. [Testing Tool Selection](#testing-tool-selection)
-7. [Example Queries](#example-queries)
-8. [Technical Deep Dive](#technical-deep-dive)
-9. [Exercises](#exercises)
-10. [What Else MCP Can Do](#what-else-mcp-can-do)
-11. [Additional Resources](#additional-resources)
-12. [Next Steps](#next-steps)
-
----
-
-## What is MCP?
-
-**Model Context Protocol (MCP)** is a protocol for connecting AI models with external tools and data sources. Think of it as a standardized way for AI systems to:
-
-- Discover available tools from multiple services
-- Call those tools with properly formatted parameters
-- Receive structured responses
-- Chain multiple tool calls together to solve complex tasks
-
-### Why MCP?
-
-Traditional approaches to AI tool calling often require:
-- Custom integration code for each service
-- Manual tool definition management
-- Complex routing logic
-- Inconsistent error handling
-
-MCP solves these problems by providing:
-- **Standardized protocol** for tool discovery and execution
-- **Server isolation** - each service runs independently
-- **Automatic tool discovery** - AI models learn what's available
-- **Type-safe schemas** - tools define their input/output contracts
-
-### Key Concepts
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       LLM (gpt-5-nano)                       │
-│              "What are the critical tickets?"                │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     MCP Orchestrator                         │
-│  • Discovers tools from all servers                         │
-│  • Converts tools to LLM-compatible format                  │
-│  • Routes tool calls to correct server                      │
-│  • Returns results back to LLM                              │
-└─────────────────────────────────────────────────────────────┘
-           │              │              │              │
-           ▼              ▼              ▼              ▼
-    ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐
-    │ Ticket  │    │Customer │    │ Billing │    │   KB    │
-    │ Server  │    │ Server  │    │ Server  │    │ Server  │
-    └─────────┘    └─────────┘    └─────────┘    └─────────┘
-```
-
----
-
-## System Architecture
-
-This tutorial implements a complete **IT Support System** with 5 specialized MCP servers:
-
-### The Five Servers
-
-#### 1. Ticket Management Server
-- **Purpose:** Track and manage support tickets
-- **Tools:** `search_tickets`, `get_ticket_details`, `get_ticket_metrics`, `find_similar_tickets`
-- **Data:** 15 sample tickets (Windows, Linux, macOS issues)
-
-#### 2. Customer Database Server
-- **Purpose:** Store customer information and SLA terms
-- **Tools:** `lookup_customer`, `check_customer_status`, `get_sla_terms`, `list_customer_contacts`
-- **Data:** 8 customers with different support tiers
-
-#### 3. Billing Server
-- **Purpose:** Manage invoices and payment tracking
-- **Tools:** `get_invoice`, `check_payment_status`, `get_billing_history`, `calculate_outstanding_balance`
-- **Data:** 15 invoices linked to customers and tickets
-
-#### 4. Knowledge Base Server
-- **Purpose:** Provide technical articles and solutions
-- **Tools:** `search_solutions`, `get_article`, `find_related_articles`, `get_common_fixes`
-- **Data:** 10 detailed troubleshooting articles
-
-#### 5. Asset Management Server
-- **Purpose:** Track hardware/software assets and warranties
-- **Tools:** `lookup_asset`, `check_warranty`, `get_software_licenses`, `get_asset_history`
-- **Data:** 12 assets with warranty and license information
-
-### How MCP Servers Work
-
-Each MCP server is a standalone Python process that:
-
-1. **Defines tools** using MCP's Tool schema
-2. **Implements handlers** for those tools
-3. **Communicates** via stdio (stdin/stdout) transport
-4. **Returns structured data** as JSON
-
-Example tool definition:
-```python
-from mcp.server import Server
-from mcp.types import Tool
-
-app = Server("ticket-management-server")
-
-@app.list_tools()
-async def list_tools() -> list[Tool]:
-    return [
-        Tool(
-            name="search_tickets",
-            description="Search for tickets by various criteria",
-            inputSchema={
-                "type": "object",
-                "properties": {
-                    "priority": {"type": "string"},
-                    "status": {"type": "string"}
-                }
-            }
-        )
-    ]
-
-@app.call_tool()
-async def call_tool(name: str, arguments: dict):
-    if name == "search_tickets":
-        # Execute search logic
-        return results
-```
-
-### The Orchestrator
-
-The **MCP Orchestrator** (`mcp_client.py`) is the central coordinator:
-
-```python
-class MCPOrchestrator:
-    def start_servers(self):
-        # Launch all 5 server processes via subprocess
-        # Establish stdio connections
-        # Initialize MCP sessions
-
-    def get_available_tools(self):
-        # Query each server for its tools
-        # Build a mapping of tool_name → server
-
-    def query(self, prompt: str, api_key: str):
-        # Convert MCP tools to OpenAI function format
-        # Send prompt + tools to gpt-5-nano
-        # Execute tool calls on appropriate servers
-        # Multi-turn conversation until final answer
-```
-
-### Multi-Turn Conversation Flow
-
-```
-User: "What are the critical tickets for customer CUST-001?"
-         │
-         ▼
-    ┌─────────────────────────────────────────┐
-    │ Orchestrator sends to gpt-5-nano:       │
-    │ - User question                          │
-    │ - All 20 available tools                │
-    └─────────────────────────────────────────┘
-         │
-         ▼
-    ┌─────────────────────────────────────────┐
-    │ gpt-5-nano decides to call:             │
-    │ search_tickets(customer_id="CUST-001",  │
-    │                priority="critical")      │
-    └─────────────────────────────────────────┘
-         │
-         ▼
-    ┌─────────────────────────────────────────┐
-    │ Orchestrator routes to ticket_server    │
-    │ Executes tool, returns results          │
-    └─────────────────────────────────────────┘
-         │
-         ▼
-    ┌─────────────────────────────────────────┐
-    │ gpt-5-nano receives results             │
-    │ Synthesizes final answer                │
-    │ "Customer CUST-001 has 2 critical..."   │
-    └─────────────────────────────────────────┘
-```
-
----
-
-## Repository Structure
+## Repository layout
 
 ```
 MCP-tutorial/
-├── README.md                                # This file - complete learning guide
-├── requirements.txt                         # Python dependencies
-│
-├── ticket_server.py                         # Ticket management MCP server (4 tools)
-├── customer_server.py                       # Customer database MCP server (4 tools)
-├── billing_server.py                        # Billing system MCP server (4 tools)
-├── kb_server.py                             # Knowledge base MCP server (4 tools)
-├── asset_server.py                          # Asset tracking MCP server (4 tools)
-│
-├── mcp_client.py                            # Orchestrator (coordinates all servers)
-├── interactive_client.py                    # CLI chat interface
-├── 1_MCP_Demo.ipynb                         # Notebook 1 - basic tutorial
-├── 2_MCP_resources_prompts_sampling.ipynb   # Notebook 2 - advanced features
-├── 3_MCP_with_Local_Model.ipynb             # Notebook 3 - local open source model
-├── sampling_demo.py                         # Sampling demo script (advanced)
-├── test_intents.py                          # Intent mapping test framework
-└── solutions_advanced_features.md           # Solutions for advanced exercises
+├── MCP_course.ipynb          the course, executed with outputs
+├── README.md                 this textbook
+├── EXERCISE.md               build a sixth server, plug it into Claude Code
+├── requirements.txt          mcp==2.2.0, openai==3.13.0
+├── .mcp.json                 Claude Code registration of the servers (project scope)
+├── images/                   Inspector screenshot used by the notebook
+├── servers/
+│   ├── common.py             make_error(), relative dates, READ_ONLY / WRITES annotations
+│   ├── ticket_server.py      5 tools (one of them writes)
+│   ├── customer_server.py    4 tools
+│   ├── billing_server.py     4 tools
+│   ├── kb_server.py          4 tools
+│   ├── asset_server.py       4 tools
+│   └── hr_server.py          2 resources, 1 prompt, 1 tool (the resources/prompts demo)
+└── client/
+    ├── agent_loop.py         the tool-calling loop over MCP servers (Responses API)
+    └── interactive_client.py terminal chat over the five help-desk servers
 ```
 
-### The Five Servers
+## The story: an IT help desk with five servers
 
-1. **Ticket Server** - Manage support tickets (search, metrics, similar tickets)
-2. **Customer Server** - Customer info and SLA terms
-3. **Billing Server** - Invoices and payment tracking
-4. **Knowledge Base Server** - Technical articles and solutions
-5. **Asset Server** - Hardware/software asset and warranty tracking
+Every example in the course uses one company: an IT support desk with five systems, each behind its own small MCP server. The data is in-memory Python (lists of dicts) with dates computed relative to today, so time windows, overdue invoices and warranties stay meaningful whenever you run it.
 
-**Total: 20 tools** across 5 servers, all discoverable and callable via natural language.
+| Server | Tools | Data |
+|---|---|---|
+| `tickets` | `search_tickets`, `get_ticket_details`, `get_ticket_metrics`, `find_similar_tickets`, `update_ticket_status` | 15 tickets (Windows, Linux, macOS) |
+| `customers` | `lookup_customer`, `check_customer_status`, `get_sla_terms`, `list_customer_contacts` | 8 customers, three support tiers |
+| `billing` | `get_invoice`, `check_payment_status`, `get_billing_history`, `calculate_outstanding_balance` | 15 invoices linked to customers and tickets |
+| `knowledge-base` | `search_solutions`, `get_article`, `find_related_articles`, `get_common_fixes` | 10 troubleshooting articles |
+| `assets` | `lookup_asset`, `check_warranty`, `get_software_licenses`, `get_asset_history` | 12 assets with warranties and licenses |
+| `hr` | `get_employee`, plus resources `hr://policy/{name}`, `hr://policy-index` and the prompt `performance_review` | 3 policies, 3 employees |
 
----
+Twenty-one tools across the five help-desk servers. Tickets link to customers, invoices to tickets, assets to customers, so cross-server questions have real answers.
 
-## Getting Started
+## Anatomy of a server
 
-### Prerequisites
-
-- **Python 3.10+**
-- **OpenAI API Key** (for gpt-5-nano integration)
-- **Hugging Face account** (free, for Notebook 3 to download Gemma 2 2B)
-
-### Installation
-
-1. **Install dependencies:**
-```bash
-pip install -r requirements.txt
-```
-
-Required packages:
-- `mcp>=1.0.0` - MCP SDK
-- `openai>=1.0.0` - OpenAI API client
-- `nest_asyncio>=1.5.0` - Jupyter compatibility
-
-2. **Set up OpenAI API key:**
-```bash
-export OPENAI_API_KEY="sk-your-key-here"
-```
-
-### Verification
-
-Test that servers can start:
-```bash
-python mcp_client.py
-```
-
-You should see:
-```
-Starting MCP servers...
-  - Starting ticket server (Ticket management server)...
-    ✓ ticket server started successfully
-  - Starting customer server (Customer database server)...
-    ✓ customer server started successfully
-  ...
-All servers started successfully!
-```
-
----
-
-## Learning Paths
-
-This tutorial offers multiple ways to learn, depending on your goals:
-
-### Path 1: Interactive Chat (Recommended for Beginners)
-
-**Best for:** Understanding how MCP works end-to-end with natural language
-
-```bash
-python interactive_client.py
-```
-
-Ask questions in plain English:
-- "What are all the critical priority tickets?"
-- "Show me customer CUST-001's information and SLA terms"
-- "Which assets have expired warranties?"
-
-**What you'll learn:**
-- How gpt-5-nano decides which tools to call
-- Multi-turn conversation patterns
-- Tool call chaining and data correlation
-
-### Path 2: Jupyter Notebook (Best for Experimentation)
-
-**Best for:** Testing individual functions and exploring data
-
-```bash
-jupyter notebook 1_MCP_Demo.ipynb
-```
-
-The notebook shows **direct function calls**:
-```python
-from ticket_server import search_tickets
-
-# Call functions directly without MCP protocol
-tickets = search_tickets(priority="critical")
-print(tickets)
-```
-
-**What you'll learn:**
-- How each server function works independently
-- Data structures and schemas
-- Function parameters and return values
-
-**Note:** The full MCP orchestrator with subprocesses doesn't work in Jupyter due to stdin/stdout limitations. Use direct function calls instead.
-
-### Path 3: Advanced Features (Resources, Prompts, Sampling)
-
-**Best for:** Students who completed the basic tutorial and want to explore advanced MCP capabilities
-
-```bash
-jupyter notebook 2_MCP_resources_prompts_sampling.ipynb
-```
-
-**What you'll learn:**
-- **Resources** - Exposing readable documents and data (HR domain examples)
-- **Prompts** - Creating reusable AI workflow templates
-- **Sampling** - Bidirectional LLM communication (advanced pattern)
-
-**Topics covered:**
-- When to use Resources vs Tools
-- Building discoverable prompt libraries
-- Privacy-preserving AI with sampling
-- E-commerce payment analysis demo
-
-**Note:** The sampling section includes theory + reference to `sampling_demo.py` for hands-on practice.
-
-### Path 4: Local Open Source Model
-
-**Best for:** Students who want to run the same MCP servers with a local model instead of OpenAI
-
-```bash
-jupyter notebook 3_MCP_with_Local_Model.ipynb
-```
-
-Notebook 3 supports two backends:
-- **Google Colab** with a free T4 GPU (loads Gemma 2 2B via Hugging Face)
-- **Local machine** via [Ollama](https://ollama.com/) (recommended if you don't want to use Colab)
-
-No OpenAI API key is needed for either path.
-
-#### Running Notebook 3 locally with Ollama
-
-1. **Install Ollama.** Download it from [ollama.com](https://ollama.com/) and start the app. On macOS it runs in the menu bar; on Linux/Windows follow the platform instructions. Ollama serves an HTTP API on `http://localhost:11434`.
-
-2. **Create a conda environment and install dependencies.**
-   ```bash
-   conda create -n mcp-tutorial python=3.11 -y
-   conda activate mcp-tutorial
-   pip install jupyter
-   pip install -r requirements.txt
-   ```
-   `requirements.txt` only contains what you need to run the notebooks locally. You do **not** need `transformers`, `torch`, `accelerate`, or `bitsandbytes` for the Ollama path — those are installed inline by Notebook 3 only when it detects it's running on Colab.
-
-3. **Verify Ollama is running.** In a terminal:
-   ```bash
-   curl http://localhost:11434/api/tags
-   ```
-   If Ollama is running, you'll get a JSON response (e.g. `{"models":[]}` if no models are pulled yet). If you get a connection error, open the Ollama app and try again.
-
-4. **Pull the model.**
-   ```bash
-   ollama pull gemma2:2b
-   ```
-
-5. **Start Jupyter from the project folder** (make sure the conda environment is activated, otherwise Jupyter won't find the installed packages):
-   ```bash
-   cd /path/to/MCP-tutorial
-   jupyter notebook 3_MCP_with_Local_Model.ipynb
-   ```
-
-When you run the backend-detection cell in the notebook, it should print `Backend detected: ollama` and the notebook will route all model calls through your local Ollama server.
-
-**What you'll learn:**
-- How to load Gemma 2 2B with 4-bit quantization
-- How to describe tools in a format local models understand
-- How to implement the tool-calling loop from scratch
-- Trade-offs between cloud APIs and local models
-
-### Path 5: Code Deep Dive (For Advanced Learners)
-
-**Best for:** Understanding implementation details
-
-1. **Start with a single server:** Read `ticket_server.py`
-   - How tools are defined with `@app.list_tools()`
-   - How handlers work with `@app.call_tool()`
-   - Error handling patterns
-
-2. **Understand the orchestrator:** Read `mcp_client.py`
-   - Server process management
-   - Tool discovery mechanism
-   - OpenAI integration
-   - Multi-turn conversation loop
-
-3. **Explore cross-server queries:**
-   - How data from multiple servers combines
-   - Tool selection strategies
-   - Error recovery patterns
-
----
-
-## Testing Tool Selection
-
-The repository includes `test_intents.py`, a comprehensive test framework that validates whether gpt-5-nano correctly selects the appropriate tools for different types of user queries.
-
-### What is Intent Mapping?
-
-**Intent mapping** is the process of understanding a user's natural language query and selecting the correct tool(s) to fulfill that request. This is a critical aspect of MCP systems because:
-
-- The same intent can be expressed in many different ways
-- gpt-5-nano must choose from 20 available tools
-- Multi-server queries require calling multiple tools in the right order
-- Poor tool selection leads to incorrect or incomplete answers
-
-### Why Test Intent Mapping?
-
-Testing ensures that:
-1. **Query variations are handled** - "What are critical tickets?" vs "Show me tickets marked as critical"
-2. **Correct tools are selected** - Search queries use search tools, not detail lookups
-3. **Multi-tool coordination works** - Complex queries call all necessary tools
-4. **Edge cases are covered** - Missing data, invalid IDs, ambiguous requests
-
-### Running the Tests
-
-**Basic usage:**
-```bash
-export OPENAI_API_KEY="sk-your-key-here"
-python test_intents.py
-```
-
-**What it tests:**
-
-The framework includes 8 intent categories with 5 query variations each (40 total test cases):
-
-1. **Search Critical Tickets** - Tests priority-based ticket searches
-2. **Customer with Tickets** - Tests cross-server queries (customer + tickets)
-3. **Billing Status** - Tests financial queries (invoices, payments)
-4. **Knowledge Base Search** - Tests KB article lookups
-5. **Asset Warranty Check** - Tests asset and warranty queries
-6. **Multi-Server Analysis** - Tests comprehensive customer overviews
-7. **Ticket Metrics** - Tests statistical queries
-8. **Similar Tickets** - Tests similarity matching
-
-### Understanding Test Results
-
-**Output format:**
-```
-Test Case: search_critical_tickets
-Description: User wants to find critical priority tickets
-Expected Tools: search_tickets
-============================================================
-
-  Testing: 'What are the critical tickets?'
-    ✅ PASS: All validations passed
-    Tools: search_tickets
-
-  Testing: 'Show me all critical priority tickets'
-    ✅ PASS: All validations passed
-    Tools: search_tickets
-
-  📊 Success Rate: 5/5 (100.0%)
-```
-
-**Success criteria:**
-- ✅ **Pass:** Correct tools were called with expected parameters
-- ❌ **Fail:** Wrong tools called, missing tools, or incorrect parameters
-
-**Overall summary:**
-```
-Total Test Variations: 40
-Passed: 38
-Failed: 2
-Overall Success Rate: 95.0%
-
-Per-Intent Breakdown:
-✅ search_critical_tickets      5/5 (100.0%)
-✅ customer_with_tickets         5/5 (100.0%)
-⚠️ billing_status               4/5 (80.0%)
-```
-
-### How It Works
-
-The test framework:
-
-1. **Starts all MCP servers** - Initializes the full orchestrator
-2. **Captures tool calls** - Intercepts which tools gpt-5-nano selects
-3. **Validates selections** - Checks if correct tools were called
-4. **Generates report** - Shows pass/fail for each query variation
-
-**Example test case:**
-```python
-{
-    "intent": "search_critical_tickets",
-    "description": "User wants to find critical priority tickets",
-    "variations": [
-        "What are the critical tickets?",
-        "Show me all critical priority tickets",
-        "List tickets with critical priority",
-    ],
-    "expected_tools": ["search_tickets"],
-    "expected_args_contain": {"priority": "critical"},
-}
-```
-
-### Teaching Use Cases
-
-Use `test_intents.py` to demonstrate:
-
-1. **Natural language variations** - Show students how many ways users express the same intent
-2. **Tool selection strategies** - Discuss why gpt-5-nano chose specific tools
-3. **Debugging failures** - Analyze why certain queries fail and how to improve them
-4. **Adding new intents** - Have students add test cases for new query types
-5. **Model comparison** - Test different models to compare tool selection accuracy
-
-### Extending the Tests
-
-Students can add their own test cases:
+Every server file has four parts, in this order. Only the last one knows MCP exists.
 
 ```python
-{
-    "intent": "your_custom_intent",
-    "description": "What the user wants to accomplish",
-    "variations": [
-        "Query variation 1",
-        "Query variation 2",
-        "Query variation 3",
-    ],
-    "expected_tools": ["tool1", "tool2"],
-    "min_tool_calls": 2,  # At least 2 tools should be called
-}
+# 1. DATA: the "database" is a list of dicts
+TICKETS = [ {...}, {...} ]
+
+# 2. PRIVATE HELPERS: underscore = not a tool
+def _matches_text(ticket, query): ...
+
+# 3. TOOLS: plain Python functions, importable and testable without MCP
+def get_ticket_details(ticket_id: str) -> dict:
+    """Get the full record of one ticket by its ID.
+
+    Args:
+        ticket_id: unique ticket identifier (e.g. TKT-1001)
+    """
+    ...
+
+# 4. MCP LAYER: the only part of this file that knows MCP exists
+mcp = MCPServer("tickets")
+mcp.tool(annotations=READ_ONLY)(search_tickets)
+mcp.tool(annotations=READ_ONLY)(get_ticket_details)
+mcp.tool(annotations=WRITES)(update_ticket_status)
+
+if __name__ == "__main__":
+    if "--http" in sys.argv:
+        mcp.run(transport="streamable-http", host="127.0.0.1", port=8000)
+    else:
+        mcp.run()                     # stdio: the host starts us
 ```
 
-### Common Failure Patterns
+What the three key lines do:
 
-**Too few tool calls:**
-- gpt-5-nano didn't gather enough information
-- May need more context in the query
+- `MCPServer("tickets")` creates the server and gives it a name.
+- `mcp.tool(annotations=...)(function)` hands an ordinary function to the server. The tool's name is the function name, its description is the docstring, its argument schema is generated from the type hints. Every parameter needs a type hint; optional ones look like `status: str | None = None`. You never write a JSON schema by hand.
+- `mcp.run()` waits for a client over stdio. With `--http` the same file becomes a web service (see [Beyond your laptop](#beyond-your-laptop-transports-authentication-trust)).
 
-**Wrong tools selected:**
-- Query might be ambiguous
-- Tool descriptions might need clarification
+The registration form `mcp.tool(...)(function)` at the bottom keeps part 3 free of MCP. The decorator form, `@mcp.tool()` above the function, does the same thing; `servers/hr_server.py` uses it so you see both spellings.
 
-**Missing parameters:**
-- Expected arguments not provided
-- gpt-5-nano might need better examples
+Two rules that bite when forgotten:
 
----
+- **Never `print()` inside a server.** On stdio, standard output *is* the connection to the client; a stray print corrupts it. Log to standard error if you must.
+- **A tool function returns a dict, a string, or raises.** Dicts and strings reach the client as text. Exceptions become a generic "Error executing tool" and your message is lost, which is the point of the next section.
 
-## Example Queries
+## Errors are written for the model
 
-Here are example queries you can try with `interactive_client.py`. They demonstrate different capabilities:
-
-### Single-Server Queries
-
-#### Example 1: Find Critical Tickets
-```
-Query: "What are all the critical priority tickets? List them with their IDs, subjects, and status."
-
-What happens:
-- gpt-5-nano calls: search_tickets(priority="critical")
-- Returns: List of critical tickets from ticket server
-```
-
-#### Example 2: Customer SLA Information
-```
-Query: "Tell me about customer CUST-001. What are their SLA terms and who are their contacts?"
-
-What happens:
-- gpt-5-nano calls: lookup_customer(customer_id="CUST-001")
-- gpt-5-nano calls: get_sla_terms(customer_id="CUST-001")
-- gpt-5-nano calls: list_customer_contacts(customer_id="CUST-001")
-- Returns: Comprehensive customer information
-```
-
-#### Example 3: Outstanding Invoices
-```
-Query: "Show me all overdue invoices and which customers have outstanding balances."
-
-What happens:
-- gpt-5-nano calls: get_billing_history() or check_payment_status()
-- May call: lookup_customer() for each customer with overdue invoices
-- Returns: Financial summary with customer details
-```
-
-#### Example 4: KB Article Search
-```
-Query: "Find knowledge base articles about Windows BSOD issues. What are the recommended solutions?"
-
-What happens:
-- gpt-5-nano calls: search_solutions(query="BSOD")
-- May call: get_article() for specific articles
-- Returns: Relevant articles with solutions
-```
-
-#### Example 5: Warranty Expiration Check
-```
-Query: "Which assets have warranties expiring in the next 30 days or have already expired?"
-
-What happens:
-- gpt-5-nano calls: check_warranty() for multiple assets
-- Or: lookup_asset() with filtering
-- Returns: List of assets needing attention
-```
-
-### Multi-Server Queries
-
-#### Example 6: Complete Customer Analysis
-```
-Query: "For customer CUST-002 (DataFlow Solutions), show me their current tickets, outstanding invoices, and assets. Is there anything that needs immediate attention?"
-
-What happens:
-- gpt-5-nano calls: lookup_customer(customer_id="CUST-002")
-- gpt-5-nano calls: search_tickets(customer_id="CUST-002")
-- gpt-5-nano calls: calculate_outstanding_balance(customer_id="CUST-002")
-- gpt-5-nano calls: lookup_asset(customer_id="CUST-002")
-- Returns: Comprehensive analysis across all systems
-```
-
-#### Example 7: Troubleshooting Help
-```
-Query: "Find similar tickets to TKT-1001 and check if there's a knowledge base article that could help resolve it."
-
-What happens:
-- gpt-5-nano calls: get_ticket_details(ticket_id="TKT-1001")
-- gpt-5-nano calls: find_similar_tickets(ticket_id="TKT-1001")
-- gpt-5-nano calls: search_solutions() based on ticket tags/category
-- Returns: Related tickets and relevant KB articles
-```
-
-### Complex Analysis Queries
-
-Try these to see advanced multi-tool coordination:
-
-```
-"Which customers have both critical tickets AND overdue invoices?"
-
-"Show me all Linux-related tickets and relevant KB articles for each."
-
-"Are there any assets assigned to customers who have expired warranties and open tickets?"
-
-"Calculate the total outstanding balance for all customers with premium SLA terms."
-```
-
----
-
-## Technical Deep Dive
-
-### Error Handling: LLM-Friendly Responses
-
-One key innovation in this tutorial is **structured error messages** that help gpt-5-nano recover gracefully:
+The one design decision worth copying from this repository: expected failures come back as data the model can act on, not as exceptions.
 
 ```python
-def make_error(message, *, reason=None, hints=None, retryable=False,
-               follow_up_tools=None, context=None):
-    """Create LLM-friendly error payload"""
-    return {
-        "error": message,                    # Short problem statement
-        "reason": reason,                    # Human-readable diagnosis
-        "suggested_actions": hints,          # What to do next
-        "retryable": retryable,              # Should the LLM retry?
-        "follow_up_tools": follow_up_tools,  # Recommended next tools
-        "context": context                   # Additional context
-    }
+def make_error(message, *, reason=None, hints=None, retryable=False, follow_up_tools=None, **extra):
+    payload = {"error": message}
+    if reason:          payload["reason"] = reason
+    if hints:           payload["suggested_actions"] = hints
+    payload["retryable"] = retryable
+    if follow_up_tools: payload["follow_up_tools"] = follow_up_tools
+    ...
 ```
 
-Example error response:
+A missing ticket produces:
+
 ```json
 {
   "error": "Ticket TKT-9999 not found",
   "reason": "The ticket_id did not match any tickets in the dataset.",
   "suggested_actions": [
-    "Call search_tickets with customer_id or priority filters to rediscover the ticket.",
+    "Call search_tickets with a query, customer_id or priority filter to rediscover the ticket.",
     "Verify the ticket_id format (e.g., TKT-1001)."
   ],
   "retryable": true,
   "follow_up_tools": ["search_tickets"],
-  "context": {"ticket_id": "TKT-9999"}
+  "ticket_id": "TKT-9999"
 }
 ```
 
-This helps gpt-5-nano:
-1. Understand what went wrong
-2. Know whether to retry with different parameters
-3. Choose the next best tool to call
-4. Provide helpful feedback to the user
+In the notebook the model asks for "ticket TKT-9999, the BitLocker one", gets this payload, calls `search_tickets(query="BitLocker")`, finds TKT-1009 and answers. The loop has no error handling at all; the recovery happens because the error told the model what to do next.
 
-### Dual-Mode Functions
+The rule: **exceptions for bugs, dicts for expected failures.** An empty search result is not an error either; `search_solutions` returns `total_count: 0` and the model tries another keyword.
 
-Each server implements functions that work in **two modes**:
+## Tool annotations
 
-1. **As regular Python functions** (for direct import)
-2. **As MCP tools** (for protocol-based calls)
+A host such as Claude Code must decide which tools it may run without asking the user. The server can say so with annotations attached to each tool:
 
-Example:
+| Hint | Meaning |
+|---|---|
+| `read_only_hint` | the tool only reads |
+| `destructive_hint` | the tool may delete or overwrite |
+| `idempotent_hint` | calling it twice is the same as once |
+| `open_world_hint` | it reaches outside its own data (the internet, other systems) |
+
+`servers/common.py` defines two presets, `READ_ONLY` and `WRITES`. Four ticket tools are read-only; `update_ticket_status` is marked as writing, and Claude Code asks before running it. Annotations are hints: a host may ignore them and a server can lie. They help honest hosts and honest servers cooperate; they are not a security boundary.
+
+## Being the client
+
+The Python SDK's client, in a notebook or a script:
+
 ```python
-# Regular Python function
-def search_tickets(priority=None, status=None):
-    """Can be called directly"""
-    results = [t for t in TICKETS if matches(t, priority, status)]
-    return {"tickets": results, "total_count": len(results)}
+import sys
+from mcp import Client, StdioServerParameters
 
-# MCP wrapper
-@app.call_tool()
-async def call_tool(name: str, arguments: dict):
-    if name == "search_tickets":
-        result = search_tickets(**arguments)
-        return [TextContent(type="text", text=json.dumps(result))]
+TICKET_SERVER = StdioServerParameters(command=sys.executable, args=["servers/ticket_server.py"])
+
+async with Client(TICKET_SERVER) as tickets:
+    listed = await tickets.list_tools()
+    for tool in listed.tools:
+        print(tool.name, tool.description.strip().splitlines()[0], tool.input_schema)
+    result = await tickets.call_tool("search_tickets", {"priority": "critical"})
+    print(result.content[0].text)          # the server's dict, as JSON text
 ```
 
-Benefits:
-- **Testing:** Call functions directly without MCP setup
-- **Jupyter:** Works in notebooks without subprocess issues
-- **Debugging:** Easier to trace function execution
-- **Flexibility:** Use with or without OpenAI integration
+Read the `Client(...)` line inside out: which program to start (this Python, running the server file), how to talk to it (the program's standard input and output, which is what **stdio** means), and who handles it (`Client`, which starts the program, talks, and stops it when the `with` block ends). `await` means "wait for the other program to answer".
 
-### Jupyter Compatibility
+Other ways to connect, same client:
 
-The orchestrator detects Jupyter environments and handles event loops properly:
+- `Client("http://127.0.0.1:8000/mcp")` connects to a server running as a web service.
+- `Client(server_object)` connects to an `MCPServer` instance in the same process, no subprocess. Handy for tests and for the raise-versus-return demo in the notebook.
 
-```python
-def _is_jupyter():
-    """Detect if we're running in a Jupyter notebook"""
-    try:
-        from IPython import get_ipython
-        return get_ipython() is not None
-    except ImportError:
-        return False
+In Jupyter and Colab, use plain top-level `await` in cells. Do not apply `nest_asyncio`; it hangs the 2.x client. Colab needs one line of plumbing before the first subprocess: if `sys.stderr.fileno()` raises, replace `sys.stderr` with `open(os.devnull, "w")`.
 
-def _run_async(coro):
-    """Run async code in both Jupyter and regular Python"""
-    loop, is_running = _ensure_event_loop()
+## What goes over the wire
 
-    if is_running:
-        # Jupyter: Use nest_asyncio for nested loops
-        import nest_asyncio
-        nest_asyncio.apply()
-        return asyncio.run(coro)
-    else:
-        # Regular Python
-        return loop.run_until_complete(coro)
+MCP speaks **JSON-RPC 2.0**: one JSON object per line; a request has an `id` and a `method`, the answer carries the same `id` and a `result`. Under the 2026-07-28 specification a session with one tool call is three exchanges:
+
+```
+--> server/discover   {"_meta": {"io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                                 "io.modelcontextprotocol/clientInfo": {...}, ...}}
+<-- result            {"supportedVersions": ["2026-07-28"], "capabilities": {...}, "resultType": "complete"}
+--> tools/list        {"_meta": {...}}
+<-- result            {"tools": [{"name": "search_tickets", "description": "...", "inputSchema": {...}}, ...]}
+--> tools/call        {"name": "get_ticket_details", "arguments": {"ticket_id": "TKT-1001"}, "_meta": {...}}
+<-- result            {"content": [{"type": "text", "text": "{ ...the dict as JSON... }"}], "isError": false}
 ```
 
-### OpenAI Integration
+Every request carries the protocol version and the client's identity in `_meta`; every result carries `resultType`. The notebook captures these messages with a wiretap: the server is started through `sh -c "tee in.log | python servers/ticket_server.py | tee out.log"`, so both directions land in files.
 
-The orchestrator converts MCP tools to OpenAI's function calling format:
+Backwards compatibility: clients and servers written before mid-2026 open with an `initialize` request instead of `server/discover`. A 2.x client sends `discover` first; an old server answers with an error and the client falls back to `initialize`. A 2.x server answers both. That is how the ADK course's older client talks to these servers.
+
+## MCP Inspector
+
+The standard debugging client from the MCP project. Needs Node.js 22.19 or newer.
+
+```bash
+npx @modelcontextprotocol/inspector python servers/ticket_server.py                          # web UI
+npx @modelcontextprotocol/inspector --cli python servers/ticket_server.py --method tools/list  # terminal only
+npx @modelcontextprotocol/inspector --cli python servers/ticket_server.py --method tools/call \
+    --tool-name get_ticket_details --tool-arg ticket_id=TKT-9999
+```
+
+In the web UI: Connect, Tools, pick a tool, run it. The History tab shows the JSON-RPC messages. A program you did not write listing and calling your tools is the whole point of a protocol.
+
+## Letting a model drive the server
+
+The tool-calling loop from the previous course, with two lines changed: the tool list comes from `list_tools`, and running a tool goes through `call_tool`. The OpenAI Responses API wants tools as `{"type": "function", "name", "description", "parameters"}`; the server's `input_schema` passes through untouched.
 
 ```python
-# MCP Tool Format
+def to_openai_tool(tool):
+    return {"type": "function", "name": tool.name, "description": tool.description or "", "parameters": tool.input_schema}
+
+async def run_with_mcp(question, mcp_client, max_rounds=6):
+    tools = [to_openai_tool(t) for t in (await mcp_client.list_tools()).tools]
+    conversation = [{"role": "developer", "content": "You are an IT help-desk assistant. Use the tools; never invent data."},
+                    {"role": "user", "content": question}]
+    for _ in range(max_rounds):
+        response = llm.responses.create(model=MODEL, input=conversation, tools=tools)
+        conversation += response.output
+        calls = [item for item in response.output if item.type == "function_call"]
+        if not calls:
+            return response.output_text
+        for call in calls:
+            result = await mcp_client.call_tool(call.name, json.loads(call.arguments))
+            conversation.append({"type": "function_call_output", "call_id": call.call_id, "output": result.content[0].text})
+```
+
+`client/agent_loop.py` is the reusable version: a `Toolbox` that collects tools from several clients and remembers which client owns which tool name, and `run_with_tools` for a running conversation. `client/interactive_client.py` opens the five servers at once with an `AsyncExitStack` (one `with` block that keeps five `with` blocks open) and drops you into a chat.
+
+The current small model, `gpt-5.6-luna`, does tool calls on the Responses API. On the older Chat Completions API it refuses function tools unless reasoning is switched off, which is one reason the course moved to Responses.
+
+## Plugging into hosts
+
+You rarely write the client. Hosts speak MCP already, so connecting a server is configuration.
+
+**Claude Code** (from the repository folder, virtual environment active):
+
+```bash
+claude mcp add tickets -- python servers/ticket_server.py
+claude mcp list
+claude                    # ask: which tickets are critical?  then: close ticket TKT-1004
+claude mcp remove tickets
+```
+
+The second question triggers a permission prompt: the host saw the `WRITES` annotation. `/mcp` inside a session lists connected servers, their tools, prompts and resources.
+
+This repository ships a **`.mcp.json`** that Claude Code reads when you open the folder (project scope; it asks once whether to trust it):
+
+```json
 {
-  "name": "search_tickets",
-  "description": "Search for tickets...",
-  "inputSchema": {
-    "type": "object",
-    "properties": {"priority": {"type": "string"}}
+  "mcpServers": {
+    "tickets":        {"command": "python", "args": ["servers/ticket_server.py"]},
+    "customers":      {"command": "python", "args": ["servers/customer_server.py"]},
+    "billing":        {"command": "python", "args": ["servers/billing_server.py"]},
+    "knowledge-base": {"command": "python", "args": ["servers/kb_server.py"]},
+    "assets":         {"command": "python", "args": ["servers/asset_server.py"]},
+    "hr":             {"command": "python", "args": ["servers/hr_server.py"]}
   }
 }
-
-# ↓ Conversion ↓
-
-# OpenAI Function Format
-{
-  "type": "function",
-  "function": {
-    "name": "search_tickets",
-    "description": "Search for tickets...",
-    "parameters": {
-      "type": "object",
-      "properties": {"priority": {"type": "string"}}
-    }
-  }
-}
 ```
 
----
+**Claude Desktop** uses `claude_desktop_config.json` (Settings, Developer, Edit Config) with the same `mcpServers` key. It does not run from your folder, so give absolute paths for both the Python interpreter (the one in your virtual environment) and the server file. **VS Code** uses `.vscode/mcp.json` with the key `servers`; **Cursor** uses `mcpServers`.
 
-## Exercises
+**Agent frameworks**: in the ADK course the same server becomes an agent's tool:
 
-### Exercise 1: Add a New Tool
-
-**Goal:** Add a tool to count tickets by priority
-
-**Steps:**
-1. Open `ticket_server.py`
-2. Add a new function:
 ```python
-def count_tickets_by_priority():
-    """Count tickets grouped by priority"""
-    counts = {}
-    for ticket in TICKETS:
-        priority = ticket.get("priority", "unknown")
-        counts[priority] = counts.get(priority, 0) + 1
-    return {"priority_counts": counts}
+McpToolset(connection_params=StdioConnectionParams(
+    server_params=StdioServerParameters(command=sys.executable, args=["servers/ticket_server.py"])))
 ```
 
-3. Register it as an MCP tool in `list_tools()`
-4. Add handler in `call_tool()`
-5. Test with interactive client
+Which program, how to talk to it, who handles it: the same three answers as `Client(...)`.
 
-### Exercise 2: Create a Cross-Server Query
+## Resources and prompts
 
-**Goal:** Find customers with high-priority tickets and overdue invoices
+Not everything an assistant needs is a question for the model. Two more things a server can publish:
 
-**Think about:**
-- Which tools would gpt-5-nano need to call?
-- In what order?
-- How would results be correlated?
+- A **resource** is a document with an address (a URI). The host shows it to the user, who attaches it to a conversation. The person decides, not the model.
+- A **prompt** is a reusable message template with blanks. The host offers it as a menu item or slash command; the person picks it and fills the blanks.
 
-**Try asking:**
+Tools are for the model to call; resources and prompts are for the host's interface and the person in front of it.
+
+```python
+@mcp.resource("hr://policy/{name}")        # an address with a hole; the function fills it
+def policy(name: str) -> str:
+    return HR_POLICIES[name]["content"]
+
+@mcp.prompt()                              # arguments become the blanks
+def performance_review(employee_id: str, review_period: str) -> str:
+    return f"Write a performance review for ..."
 ```
-"Which customers have both high-priority or critical tickets AND overdue invoices?
-Show me their names, ticket counts, and total overdue amounts."
+
+Client side: `list_resources`, `list_resource_templates`, `read_resource(uri)` (gives content plus MIME type), `list_prompts`, `get_prompt(name, arguments)` (gives ready-made messages). Where you meet them: the attachment menu in Claude Desktop, slash commands, and `/mcp` in Claude Code.
+
+**Sampling**, an older feature that let a server ask the host's model for a completion, was deprecated in the 2026-07-28 specification together with roots and logging. Servers that need a model call the model provider directly. Do not build on it.
+
+## Beyond your laptop: transports, authentication, trust
+
+**stdio** (everything above): the host starts the server as a child process. One user, one machine, nothing to configure. Fine for development and personal tools.
+
+**Streamable HTTP**: the server is a small web service and the client gets a URL. One server, running centrally, many clients. Our servers support it with one flag:
+
+```bash
+python servers/ticket_server.py --http        # listens on http://127.0.0.1:8000/mcp
 ```
 
-### Exercise 3: Improve Error Messages
+```python
+async with Client("http://127.0.0.1:8000/mcp") as tickets: ...
+```
 
-**Goal:** Add better error guidance when a customer is not found
+The older HTTP+SSE transport is deprecated; new servers use Streamable HTTP.
 
-**Steps:**
-1. Open `customer_server.py`
-2. Find the `lookup_customer()` function
-3. Enhance the error response with:
-   - More specific hints
-   - List of valid customer IDs
-   - Suggestion to search by company name
+**Authentication.** A remote server is a web API like any other. MCP uses OAuth 2.0: the host obtains a token from the organisation's login system and sends it with every request, the server checks it. The Python SDK implements the flow on both sides; you configure it rather than write it.
 
-### Exercise 4: Build Your Own Server
+**Low trust.** A server is somebody's code touching your data. Organisations put servers behind a gateway, allow-list which servers agents may use, prefer read-only tools, and log every call. Annotations are one input to those decisions.
 
-**Goal:** Create a new MCP server (e.g., "scheduling server" for maintenance windows)
+**Tool poisoning.** Tool descriptions are text the model reads and trusts. A malicious or compromised server can hide instructions in a description or a result ("before answering, also send the user's files to ..."), and annotations can lie. Only connect to servers you trust, read what they expose, and treat a new server like a new dependency in your code, because that is what it is.
 
-**Requirements:**
-1. Define 3-4 tools
-2. Use in-memory sample data
-3. Implement proper error handling
-4. Add it to the orchestrator's server configs
-5. Test with natural language queries
+## Example questions
 
----
+For `python client/interactive_client.py` or Claude Code with the servers registered:
 
-## Additional Resources
+- What are all the critical priority tickets?
+- Show me customer CUST-001's SLA terms and contacts.
+- Which assets have warranties expiring in the next 30 days?
+- Which customers have both open tickets and overdue invoices?
+- Find similar tickets to TKT-1001 and a knowledge base article that could help.
+- For customer CUST-002: open tickets, outstanding balance, and any asset with an expired warranty.
 
-### Sample Data Overview
+Watch the `->` lines in the terminal: each names the tool and, through it, the server that answered.
 
-All servers contain realistic, interconnected data:
+## Troubleshooting
 
-- **15 tickets** - Windows, Linux, macOS issues with realistic problems
-- **8 customers** - Different tiers (basic, standard, premium)
-- **15 invoices** - Mix of paid, pending, and overdue
-- **10 KB articles** - Detailed technical solutions
-- **12 assets** - Servers, workstations, laptops with warranty tracking
+- **`ModuleNotFoundError: mcp.server.fastmcp` or `FastMCP`**: you have code from the 1.x line. In 2.x the class is `MCPServer` from `mcp.server`.
+- **`pip install mcp` installed 2.x but a course pins 1.x** (the ADK course): use a separate virtual environment per course.
+- **A notebook cell hangs on `async with Client(...)`**: remove `nest_asyncio`. Use plain top-level `await`.
+- **`sys.stderr.fileno()` error on Colab**: run the plumbing lines from the "Be the Client" section first.
+- **The client gets garbage or disconnects**: the server printed to standard output. Remove the `print`, or log to standard error.
+- **Port 8000 already in use** for the HTTP demo: `lsof -i :8000` (macOS, Linux) and stop the old process; the notebook cell terminates its own server, but an interrupted cell may not.
+- **Stray servers after an interrupted cell**: `pkill -f "servers/.*_server.py"` (macOS, Linux).
+- **The wiretap cell fails on Windows**: it needs `sh` and `tee`. Run that cell in Colab, or inside Git Bash / WSL.
+- **Inspector fails to start**: check `node --version` (needs 22.19 or newer).
+- **The model gives up on TKT-9999 instead of searching**: models are not deterministic; run the cell again.
+- **`Function tools with reasoning_effort are not supported ... in /v1/chat/completions`**: the current models do tool calls on the Responses API. Use `client.responses.create`, as this course does.
 
-Data is cross-referenced: tickets link to customers, invoices link to tickets, assets link to customers.
+## What changed since the 2025 version of this course
 
-### Key Files Reference
+- Three notebooks became one. The local-model notebook (Gemma 2 with a hand-parsed tool loop) is gone; the previous course teaches the loop, and this one puts MCP under it.
+- `mcp` 1.x to **2.x**: `FastMCP` is now `MCPServer`; the low-level `Server` with `@app.list_tools()` and hand-written schemas is replaced by functions with type hints; `ClientSession` plus `stdio_client` became one `Client`; field names are snake_case (`input_schema`, `read_only_hint`).
+- Specification **2026-07-28**: no `initialize` handshake, `server/discover` and per-request `_meta` instead; sampling, roots and logging deprecated; SSE transport deprecated in favour of Streamable HTTP.
+- `gpt-5-nano` (retiring in December 2026) became `gpt-5.6-luna`, and the loop moved from Chat Completions to the Responses API.
+- The hand-rolled `MCPOrchestrator` became a 60-line `agent_loop.py`; the model-driven demos now run inside the notebook instead of only in a terminal.
+- The servers moved to `servers/`, the error helper is shared in `servers/common.py`, and all mock dates are relative to today.
 
-| File | Purpose |
-|------|---------|
-| `mcp_client.py` | Orchestrator - coordinates all servers |
-| `interactive_client.py` | CLI interface for natural language queries |
-| `ticket_server.py` | Ticket management MCP server |
-| `customer_server.py` | Customer database MCP server |
-| `billing_server.py` | Billing system MCP server |
-| `kb_server.py` | Knowledge base MCP server |
-| `asset_server.py` | Asset tracking MCP server |
-| `1_MCP_Demo.ipynb` | Notebook 1 - basic tutorial with direct function calls |
-| `2_MCP_resources_prompts_sampling.ipynb` | Notebook 2 - advanced MCP features |
-| `3_MCP_with_Local_Model.ipynb` | Notebook 3 - Gemma 2 2B on Colab T4 GPU |
+## Exercise and further reading
 
-### Performance Characteristics
-
-- **Startup time:** ~2-3 seconds (all 5 servers)
-- **Tool discovery:** <1 second
-- **Single tool call:** 50-200ms
-- **OpenAI API call:** 1-5 seconds (network dependent)
-- **Complex multi-tool query:** 5-15 seconds
-
-### Troubleshooting
-
-**Servers won't start:**
-- Check Python version: `python --version` (need 3.10+)
-- Verify all server files exist
-- Try running a single server: `python ticket_server.py`
-
-**OpenAI API errors:**
-- Verify API key: `echo $OPENAI_API_KEY`
-- Check API quota/credits
-- Ensure network connectivity
-
-**Tool calls failing:**
-- Check argument types match schema
-- Look for error messages in terminal
-- Test function directly in Python
-
-**Jupyter issues:**
-- Don't try to use MCP orchestrator with subprocesses in Jupyter
-- Use direct function imports instead
-- See `1_MCP_Demo.ipynb` for examples
-
----
-
-## What Else MCP Can Do
-
-This tutorial covers tools, resources, prompts, and sampling. MCP has a few more features worth knowing about, even if we don't implement them here.
-
-### Transport
-
-A transport is just how the client talks to the server. What is the connection?
-
-**stdio (what this tutorial uses):** Think of it like opening a calculator app on your laptop. Your code launches the server as a child process on the same machine and they talk through that process's input and output pipes. It is simple and reliable, but the server only exists while your script is running, only your script can use it, and it can never live on another machine. All five servers in this tutorial work this way.
-
-**Streamable HTTP (what production systems use):** Think of it like a website. The server runs somewhere as a web service at a URL like `https://tickets.mycompany.com/mcp`. Anyone with that URL can connect. Multiple clients can connect at the same time. It keeps running even after you close your laptop.
-
-Same MCP protocol, same tools, same everything. Just the connection method is different. Imagine a company wants to run the ticket server once, centrally, and let all their AI agents connect to it. With stdio that is not possible. Every user would have to run their own copy. With Streamable HTTP, you run it once and give people the URL. That is the practical difference: stdio is fine for development and learning, Streamable HTTP is what you need for a real deployed service.
-
-### Authentication
-
-When your server runs over Streamable HTTP, you need to control who can connect. MCP has built-in support for OAuth 2.0 authentication. A client that wants to connect to a protected server goes through an OAuth flow first, gets a token, and includes it with every request. The server validates the token before handling anything.
-
-In this tutorial all servers use stdio and run as local processes. There is no network, so there is nothing to authenticate. But if you deployed the ticket server as a web service at a real URL, you would want authentication in place so that only authorized clients can call your tools.
-
-### Roots
-
-Roots are a way for the client to tell the server which parts of the filesystem it is allowed to access. The client sends a list of root URIs (file paths or other resource locations) and the server is expected to stay within those boundaries. Think of it like handing someone access to one folder on your computer, not the entire drive.
-
-In this tutorial all servers work with in-memory data and never touch the filesystem. Roots only matter when a server needs to read or write files, at which point the client uses roots to set the scope of what the server is allowed to see.
-
-### Elicitation
-
-Elicitation lets a server pause during tool execution and ask the user a direct question. The normal flow is: the user asks something, the AI picks a tool, the tool runs, and the tool returns a result. With elicitation, the tool can interrupt that flow and ask for more information before it continues.
-
-An example: a user asks "cancel the ticket" without specifying which one. The server can send an elicitation request with a question like "Which ticket did you mean?" The host shows it to the user, the user answers, and the tool continues with the new information. It is useful for tools that genuinely need input they cannot infer from the original query.
-
-### Tool Annotations
-
-Tool annotations are optional metadata you can attach to a tool definition to describe how it behaves. Useful annotations include `readOnly` (the tool only reads data, it never changes anything), `destructive` (the tool can delete or modify records), and `requiresConfirmation` (the host should ask the user before running this tool).
-
-Annotations do not change what the tool does. They help the host application decide how to present the tool to the user. A well-behaved client might show a confirmation dialog before running a destructive tool and skip it for read-only searches.
-
----
-
-## Next Steps
-
-After completing this tutorial, you can:
-
-1. **Extend the system** - Add more servers (e.g., monitoring, scheduling)
-2. **Enhance tools** - Add more sophisticated search and filtering
-3. **Production deployment** - Replace in-memory data with real databases
-4. **Scale up** - Implement connection pooling, caching, queuing
-5. **Advanced patterns** - Implement tool chaining, conditional logic, error recovery
-
-### Learn More About MCP
-
-- [MCP Official Documentation](https://github.com/modelcontextprotocol/modelcontextprotocol)
-- [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk)
-- [OpenAI Function Calling Guide](https://platform.openai.com/docs/guides/function-calling)
-
----
-
-For questions or issues, check the repository's issue tracker or reach out to your instructor.
+- **Exercise:** [EXERCISE.md](EXERCISE.md): build a sixth server and plug it into Claude Code (about 30 minutes).
+- MCP specification and documentation: https://modelcontextprotocol.io
+- Python SDK: https://github.com/modelcontextprotocol/python-sdk (migration guide for 1.x code: https://py.sdk.modelcontextprotocol.io/migration/)
+- MCP Inspector: https://github.com/modelcontextprotocol/inspector
+- Claude Code and MCP: https://code.claude.com/docs/en/mcp
+- OpenAI Responses API, function calling: https://developers.openai.com/api/docs/guides/function-calling
 
 ## License
 
 MIT
-
-## Credits
-
-Built with:
-- [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol/modelcontextprotocol)
-- [OpenAI API](https://platform.openai.com/)
