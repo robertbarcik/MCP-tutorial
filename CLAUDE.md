@@ -66,7 +66,7 @@ requirements.txt        mcp==2.2.0, openai==3.13.0 (pins must match the notebook
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt jupyter nbconvert ipykernel
-source ~/.config/training-ops/openai.env   # Robert's key (see training-ops/ONBOARDING.md)
+export OPENAI_API_KEY=...            # your own key
 jupyter nbconvert --to notebook --execute --inplace MCP_course.ipynb --ExecutePreprocessor.timeout=300
 pgrep -fl "servers/.*_server.py"     # must be empty afterwards (no stray servers)
 # skip-safety: strip every corner (cells from a collapsed_sections heading to the next H1/H2) into a
