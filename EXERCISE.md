@@ -4,6 +4,18 @@ The course used five help-desk servers. Now build a sixth one, in a domain you c
 
 **Time: about 30 minutes.** Use an LLM as your coding companion for the boring parts.
 
+## Starter variant: add one tool to an existing server (about 20 minutes)
+
+If you are not a developer, or short on time, do this one instead. The skill it trains is the one that matters most in MCP: writing a description and an error that a model can act on.
+
+1. Open `servers/hr_server.py` and find `get_employee` near the bottom.
+2. Below it, add `list_department(department: str) -> dict`. It returns the employees of one department (name and role are enough). When no employee matches, return `make_error(...)` with a hint that lists the known departments.
+3. Write the docstring for the model: one line saying what the tool does, an `Args:` section, an example value (`Engineering`).
+4. Register it with the same line as its neighbour: `@mcp.tool(annotations=READ_ONLY)`.
+5. Check it in Inspector: `npx @modelcontextprotocol/inspector python servers/hr_server.py`. Does the tool appear? Call it with a department that does not exist and read your own error hint. Would a model know what to do next?
+
+An LLM can write the Python for you; the description and the error are yours.
+
 ## What you will build
 
 A server file `servers/<your_domain>_server.py` with:

@@ -9,6 +9,18 @@ A short Python course on the Model Context Protocol. **One notebook is the cours
 material). Its H1 sections are the in-class flow and, later, the video units. The README is the
 take-home textbook version of the same material; keep the two in step.
 
+**Two paths in one notebook (since 2026-09-13).** The audience is mixed (IT/PO colleagues with
+basic Python next to developers). Everything visible by default is the *everyone path*: README
+voice, short cells, copyable four-line client shape, no plumbing. Each chapter may end with one
+`## 🛠️ Developer corner: …` H2 (previous technical notebook voice, "optional detail" lines,
+`**🛠️ Stretch.**` tasks). Corners are listed in notebook metadata `colab.collapsed_sections`
+(the `metadata.id` of the corner heading cells, verified against real Colab notebooks) so they
+open collapsed in Colab. Two invariants, both tested by executing a copy with every corner
+stripped: a corner never defines anything the everyone path uses, and every corner is
+self-contained (Run all still works). Mini-task levels: `### 🎯 Mini-task` for everyone,
+`**🛠️ Stretch.**` inside corners. When a concept moves, it moves to a corner, never out of
+the notebook.
+
 Rebuilt 2026-09-12 on `mcp==2.2.0` (spec 2026-07-28) and `openai==3.13.0` / `gpt-5.6-luna`.
 The 2025 version (three notebooks, low-level `Server` API, `gpt-5-nano`, Chat Completions,
 Gemma 2 notebook) is in git history before that date.
@@ -44,17 +56,21 @@ requirements.txt        mcp==2.2.0, openai==3.13.0 (pins must match the notebook
   in the key cell, or every HTTP request lands in cell outputs.
 - **ADK bridge is shown, not run**: ADK pins `mcp<2`; a 2.x server works with its 1.x client
   (verified 2026-09-12), but the two cannot share one environment.
-- The notebook is built by a builder script kept in the session scratchpad (nbformat); when
-  editing by hand, keep cell order = section order and re-execute.
+- The notebook is built by a builder script (nbformat) that copies unchanged code cells from the
+  previous notebook by cell id and defines all markdown explicitly; the 2026-09-13 builder is
+  `training-ops/filming/mcp/build_mcp_course.py`. When editing by hand, keep cell order = section
+  order, keep corner headings in `colab.collapsed_sections`, and re-execute.
 
 ## Running and verifying
 
 ```bash
 python3.12 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt jupyter nbconvert ipykernel
-export OPENAI_API_KEY=...            # Robert's key: testing-tutorial/.env
+source ~/.config/training-ops/openai.env   # Robert's key (see training-ops/ONBOARDING.md)
 jupyter nbconvert --to notebook --execute --inplace MCP_course.ipynb --ExecutePreprocessor.timeout=300
 pgrep -fl "servers/.*_server.py"     # must be empty afterwards (no stray servers)
+# skip-safety: strip every corner (cells from a collapsed_sections heading to the next H1/H2) into a
+# copy inside the repo folder, execute it, expect zero errors (13 code cells on the everyone path)
 printf 'Which customers have both open tickets and overdue invoices?\nexit\n' | python client/interactive_client.py
 ```
 

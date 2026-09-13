@@ -4,6 +4,8 @@ A hands-on course on the **Model Context Protocol (MCP)**: how to expose your ow
 
 The course is one notebook, **`MCP_course.ipynb`**, read top to bottom. This README is the textbook version of it: the same material, written to be re-read later.
 
+The notebook has two paths. Everything visible by default is for everyone: short cells, plain words, runnable with basic Python. Collapsed **🛠️ Developer corner** sections at the end of chapters hold the proof and the plumbing (the wire, raise versus return, the HTTP launch, the framework bridge). Skip them in class, open them at home; nothing outside a corner depends on anything inside one.
+
 **Open in Colab:** [MCP_course.ipynb](https://colab.research.google.com/github/robertbarcik/MCP-tutorial/blob/main/MCP_course.ipynb). The first cells install the packages and clone this repository into the Colab session; you need an OpenAI API key (Colab secret `OPENAI_API_KEY`).
 
 Built and verified in September 2026 on `mcp==2.2.0` (MCP specification 2026-07-28), `openai==3.13.0` and the model `gpt-5.6-luna`.
@@ -412,7 +414,7 @@ Watch the `->` lines in the terminal: each names the tool and, through it, the s
 
 ## Exercise and further reading
 
-- **Exercise:** [EXERCISE.md](EXERCISE.md): build a sixth server and plug it into Claude Code (about 30 minutes).
+- **Exercise:** [EXERCISE.md](EXERCISE.md): a starter variant (add one tool to the HR server, about 20 minutes) and the full one (build a sixth server and plug it into Claude Code, about 30 minutes).
 - MCP specification and documentation: https://modelcontextprotocol.io
 - Python SDK: https://github.com/modelcontextprotocol/python-sdk (migration guide for 1.x code: https://py.sdk.modelcontextprotocol.io/migration/)
 - MCP Inspector: https://github.com/modelcontextprotocol/inspector
