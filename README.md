@@ -2,7 +2,7 @@
 
 A hands-on course on the **Model Context Protocol (MCP)**: how to expose your own Python functions to any AI application, how to be the client yourself, what travels on the wire, and how to plug a server into Claude Code, Claude Desktop or an agent framework.
 
-The course is one notebook, **`MCP_course.ipynb`**, read top to bottom. This README is the textbook version of it: the same material, written to be re-read later.
+The course is one notebook, **`MCP_course.ipynb`**, read top to bottom: the finished help desk first, then the server, the client, a model driving it, real hosts on both roads (your server, someone else's), resources and prompts, and the same server on a URL. This README is the textbook version of it: the same material, written to be re-read later.
 
 The notebook has two paths. Everything visible by default is for everyone: short cells, plain words, runnable with basic Python. Collapsed **🛠️ Developer corner** sections at the end of chapters hold the proof and the plumbing (the wire, raise versus return, the HTTP launch, the framework bridge). Skip them in class, open them at home; nothing outside a corner depends on anything inside one.
 
@@ -15,24 +15,26 @@ Built and verified in September 2026 on `mcp==2.2.0` (MCP specification 2026-07-
 ## Contents
 
 1. [What MCP is, in two sentences](#what-mcp-is-in-two-sentences)
-2. [When to use MCP, and when a CLI is enough](#when-to-use-mcp-and-when-a-cli-is-enough)
-3. [Quick start](#quick-start)
-4. [Repository layout](#repository-layout)
-5. [The story: an IT help desk with five servers](#the-story-an-it-help-desk-with-five-servers)
-6. [Anatomy of a server](#anatomy-of-a-server)
-7. [Errors are written for the model](#errors-are-written-for-the-model)
-8. [Tool annotations](#tool-annotations)
-9. [Being the client](#being-the-client)
-10. [What goes over the wire](#what-goes-over-the-wire)
-11. [MCP Inspector](#mcp-inspector)
-12. [Letting a model drive the server](#letting-a-model-drive-the-server)
-13. [Plugging into hosts](#plugging-into-hosts)
-14. [Resources and prompts](#resources-and-prompts)
-15. [Beyond your laptop: transports, authentication, trust](#beyond-your-laptop-transports-authentication-trust)
-16. [Example questions](#example-questions)
-17. [Troubleshooting](#troubleshooting)
-18. [What changed since the 2025 version of this course](#what-changed-since-the-2025-version-of-this-course)
-19. [Exercise and further reading](#exercise-and-further-reading)
+2. [Where MCP sits](#where-mcp-sits)
+3. [When to use MCP, and when a CLI is enough](#when-to-use-mcp-and-when-a-cli-is-enough)
+4. [Quick start](#quick-start)
+5. [Repository layout](#repository-layout)
+6. [The story: an IT help desk with five servers](#the-story-an-it-help-desk-with-five-servers)
+7. [Anatomy of a server](#anatomy-of-a-server)
+8. [Errors are written for the model](#errors-are-written-for-the-model)
+9. [Tool annotations](#tool-annotations)
+10. [Being the client](#being-the-client)
+11. [What goes over the wire](#what-goes-over-the-wire)
+12. [MCP Inspector](#mcp-inspector)
+13. [Letting a model drive the server](#letting-a-model-drive-the-server)
+14. [Plugging into hosts](#plugging-into-hosts)
+15. [The other road: installing someone else's server](#the-other-road-installing-someone-elses-server)
+16. [Resources and prompts](#resources-and-prompts)
+17. [Beyond your laptop: transports, authentication, trust](#beyond-your-laptop-transports-authentication-trust)
+18. [Example questions](#example-questions)
+19. [Troubleshooting](#troubleshooting)
+20. [What changed since the 2025 version of this course](#what-changed-since-the-2025-version-of-this-course)
+21. [Exercise and further reading](#exercise-and-further-reading)
 
 ---
 
@@ -41,6 +43,42 @@ Built and verified in September 2026 on `mcp==2.2.0` (MCP specification 2026-07-
 MCP is an agreed way for a program that owns data or functions (a **server**) to describe them and serve them to any AI application (a **client**). The client asks two questions, *what tools do you have?* and *run this one for me*, and everything else is built on top of those two.
 
 A **server** waits to be asked; it does nothing on its own. A **client** is the program that asks: Claude Code, Claude Desktop, an agent framework, or a script you write. The words say nothing about where the programs run.
+
+## Where MCP sits
+
+Every AI application that does something in the world has the same four layers. MCP is one of them.
+
+```text
+┌─────────────────────────────────────────────────────┐
+│  ORCHESTRATION LAYER                                │
+│  "When do we call what, with what state,            │
+│   under what guardrails, across how many agents?"   │
+│                                                     │
+│  ADK · LangGraph · CrewAI · OpenAI Agents SDK ·     │
+│  Claude Agent SDK · AWS Strands · Azure AI Foundry  │
+├─────────────────────────────────────────────────────┤
+│  LLM LAYER                                          │
+│  The reasoning engine that generates tool calls,    │
+│  plans, and responses.                              │
+│                                                     │
+│  Gemini · Claude · GPT · Mistral · Llama · ...      │
+├─────────────────────────────────────────────────────┤
+│  TOOL/AGENT ACCESS LAYER                            │
+│  How the LLM reaches tools, data, and other agents. │
+│                                                     │
+│  MCP (tools & data) · A2A (agent-to-agent) ·        │
+│  Native function calling · Direct SDK calls         │
+├─────────────────────────────────────────────────────┤
+│  ACTUAL SYSTEMS                                     │
+│  Databases, APIs, files, SaaS apps, other agents    │
+└─────────────────────────────────────────────────────┘
+```
+
+*(From the publication "Agent Horizon", publications.barcik.training.)*
+
+Read it bottom up. At the bottom are the systems that already exist: a ticket database, a file share, GitHub. At the top, a framework decides when to call what. In between, the model reasons and asks for tools. **MCP lives in the third layer**: it answers the narrow question of how a model reaches a tool that somebody else wrote and runs. Native function calling, from the previous course, is the same layer without a protocol; the function lives inside your own program. The ADK course, which follows this one, is the top layer.
+
+Two consequences. MCP does not think, plan or remember; the layers above it do. A server is a menu of functions and the code behind them. And whatever changes above and below, the two questions in this layer stay the same: *what can you do?* and *do this for me.* That is why the course stays with those two questions rather than with any one version of any one tool.
 
 ## When to use MCP, and when a CLI is enough
 
@@ -83,7 +121,6 @@ MCP-tutorial/
 ├── EXERCISE.md               build a sixth server, plug it into Claude Code
 ├── requirements.txt          mcp==2.2.0, openai==3.13.0
 ├── .mcp.json                 Claude Code registration of the servers (project scope)
-├── images/                   Inspector screenshot used by the notebook
 ├── servers/
 │   ├── common.py             make_error(), relative dates, READ_ONLY / WRITES annotations
 │   ├── ticket_server.py      5 tools (one of them writes)
@@ -328,6 +365,47 @@ This repository ships a **`.mcp.json`** that Claude Code reads when you open the
 McpToolset(connection_params=StdioConnectionParams(
     server_params=StdioServerParameters(command=sys.executable, args=["servers/ticket_server.py"])))
 ```
+
+## The other road: installing someone else's server
+
+From a host's point of view there are two roads to a server, and they look the same:
+
+```text
+                a host: Claude Code, Claude Desktop, your agent
+                                   │
+                                   │  "start this program,
+                                   │   what tools do you have?"
+                    ┌──────────────┴──────────────┐
+                    ▼                             ▼
+          SOMEONE ELSE'S SERVER            YOUR OWN SERVER
+          you install it                   you write it
+          (npx ..., pip install ...,       (servers/ticket_server.py)
+           or just a URL)
+                    │                             │
+            list_tools + call_tool        list_tools + call_tool
+                    │                             │
+                    ▼                             ▼
+          an outside system:               your own data:
+          files, GitHub, docs, ...         the tickets list
+          (often with YOUR token)          (or a real database)
+```
+
+Only two things differ: who wrote the program, and what its tools talk to. Most people, most of the time, take the left road. The MCP project publishes a few reference servers; the one that serves files from folders you name installs into Claude Code with one line (the program is downloaded on first start):
+
+```bash
+claude mcp add files -- npx -y @modelcontextprotocol/server-filesystem /full/path/to/MCP-tutorial
+claude                    # ask: list the files in servers/ and tell me which one has a tool that writes
+                          # then: rename README.md to notes.md   (the host asks first)
+claude mcp remove files
+```
+
+A server on a URL is the same line with an address instead of a command. DeepWiki, a public server that explains open-source repositories, needs no login:
+
+```bash
+claude mcp add --transport http deepwiki https://mcp.deepwiki.com/mcp
+```
+
+The difference between the roads is trust. You wrote the ticket server and know what it sees and changes. The file server sees every folder you named and has tools that rename and write; a server on a URL runs on someone else's machine and sees whatever you send it. Before installing, connect Inspector to it, read every tool description and annotation, and ask: who wrote it, which tools write or delete, what data does it see. See [tool poisoning](#beyond-your-laptop-transports-authentication-trust) below.
 
 Which program, how to talk to it, who handles it: the same three answers as `Client(...)`.
 
