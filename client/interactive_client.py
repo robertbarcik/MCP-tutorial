@@ -38,7 +38,7 @@ EXAMPLES = [
 
 async def main():
     logging.getLogger("httpx").setLevel(logging.WARNING)   # the OpenAI client logs every request otherwise
-    api_key = os.environ.get("OPENAI_API_KEY") or getpass("OpenAI API key: ")
+    api_key = (os.environ.get("OPENAI_API_KEY") or getpass("OpenAI API key: ")).strip()
     llm = OpenAI(api_key=api_key)
 
     print(f"Starting {len(SERVERS)} MCP servers ...")
