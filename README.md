@@ -2,13 +2,23 @@
 
 A hands-on course on the **Model Context Protocol (MCP)**: how to expose your own Python functions to any AI application, how to be the client yourself, what travels on the wire, and how to plug a server into Claude Code, Claude Desktop or an agent framework.
 
-The course is one notebook, **`MCP_course.ipynb`**, read top to bottom: the finished help desk first, then the server, the client, a model driving it, real hosts on both roads (your server, someone else's), resources and prompts, and the same server on a URL. This README is the textbook version of it: the same material, written to be re-read later.
+The course is one notebook, **`MCP_course.ipynb`**, read top to bottom. Its chapters are numbered 0 to 4 and every numbered section is one video:
 
-The notebook has two paths. Everything visible by default is for everyone: short cells, plain words, runnable with basic Python. Collapsed **🛠️ Developer corner** sections at the end of chapters hold the proof and the plumbing (the wire, raise versus return, the HTTP launch, the framework bridge). Skip them in class, open them at home; nothing outside a corner depends on anything inside one.
+| Chapter | Sections (one video each) |
+|---|---|
+| 0. Welcome | 0.1 What MCP is and where it sits · 0.2 Materials and setup · 0.3 When to use MCP, when not, and our help-desk story |
+| 1. A Server and a Client | 1.1 Result first: five servers, one chat · 1.2 The thing underneath: plain functions · 1.3 Anatomy of a server · 1.4 Be the client · 1.5 What travels between the two programs · *Optional: MCP Inspector* |
+| 2. Let a Model Drive It | 2.1 A tiny orchestrator: the loop · 2.2 Errors written for the model · 2.3 Annotations |
+| 3. Plug Into a Real Application | 3.1 Our server in a real host · 3.2 Someone else's server |
+| 4. What Else, and Your Turn | 4.1 Resources and prompts · *Optional: Beyond your laptop* · 4.2 Your turn |
+
+This README is the textbook version of it: the same material, written to be re-read later.
+
+The notebook has two paths. Everything visible by default is for everyone: short cells, plain words, runnable with basic Python. Collapsed **🛠️ Developer corner** sections hold the proof and the plumbing (the wire, raise versus return, the HTTP launch, the framework bridge). They have no video; nothing outside a corner depends on anything inside one.
 
 **Open in Colab:** [MCP_course.ipynb](https://colab.research.google.com/github/robertbarcik/MCP-tutorial/blob/main/MCP_course.ipynb). The first cells install the packages and clone this repository into the Colab session; you need an OpenAI API key (Colab secret `OPENAI_API_KEY`).
 
-Built and verified in September 2026 on `mcp==2.2.0` (MCP specification 2026-07-28), `openai==3.13.0` and the model `gpt-5.6-luna`.
+Built in September 2026 and re-verified in November 2026 on `mcp==2.2.0` (MCP specification 2026-07-28), `openai==3.13.0` and the model `gpt-5.6-luna`.
 
 ---
 
@@ -20,7 +30,7 @@ Built and verified in September 2026 on `mcp==2.2.0` (MCP specification 2026-07-
 4. [Quick start](#quick-start)
 5. [Repository layout](#repository-layout)
 6. [The story: an IT help desk with five servers](#the-story-an-it-help-desk-with-five-servers)
-7. [Anatomy of a server](#anatomy-of-a-server)
+7. [The thing underneath: plain functions](#the-thing-underneath-plain-functions) and [Anatomy of a server](#anatomy-of-a-server)
 8. [Errors are written for the model](#errors-are-written-for-the-model)
 9. [Tool annotations](#tool-annotations)
 10. [Being the client](#being-the-client)
@@ -82,13 +92,14 @@ Two consequences. MCP does not think, plan or remember; the layers above it do. 
 
 ## When to use MCP, and when a CLI is enough
 
-If you control both sides and the consumer is a coding agent on your own machine, a command-line tool with good documentation usually beats an MCP server. The agent reads the help text, runs the command, reads the output. A server adds a layer and takes nothing away.
+**Use MCP when the one who calls your functions is not you.** At least one of these holds:
 
-Use MCP when at least one of these holds:
-
-- **You do not control the client.** Colleagues on Claude.ai, ChatGPT or Copilot cannot run your script; they can connect to your server.
+- **You do not control the application.** Colleagues on Claude.ai, ChatGPT or Copilot cannot run your script; they can connect to your server.
 - **The user should not have a shell.** A company wants its ticket system reachable by agents, but only through a handful of vetted functions, behind a login, with every call logged.
 - **Many people share one server.** It runs centrally; nobody installs anything.
+- **Your users arrive through an agent.** More and more people ask an assistant to do the thing instead of opening your product themselves. A server is the door that assistant can use.
+
+**Skip MCP when both sides are yours.** If the consumer is a coding agent on your own machine, a command-line tool with good documentation is usually enough. The agent reads the help text, runs the command, reads the output. A server adds a layer and takes nothing away.
 
 Rule of thumb: MCP is for the boundary between you and someone else's agent.
 
@@ -148,6 +159,14 @@ Every example in the course uses one company: an IT support desk with five syste
 | `hr` | `get_employee`, plus resources `hr://policy/{name}`, `hr://policy-index` and the prompt `performance_review` | 3 policies, 3 employees |
 
 Twenty-one tools across the five help-desk servers. Tickets link to customers, invoices to tickets, assets to customers, so cross-server questions have real answers.
+
+## The thing underneath: plain functions
+
+Underneath every server are ordinary Python functions. You can import `servers/ticket_server.py` like any module and call `search_tickets(priority="critical")` with no MCP anywhere.
+
+The function could be anything. Ours searches a list of tickets; it could just as well read a mailbox, query a company database, move an object in Blender or create a design in Canva. Servers for all of these exist: Google publishes one for Gmail, Canva has an official one, and Blender has a popular one written by its community. This is ordinary, "old" software: the same input gives the same output, and there is no AI inside. MCP adds no intelligence to it; it only makes it reachable for a model.
+
+It is also a change in how products are built. For years many products had one door: a screen with buttons, made for a person. Now more and more users send an agent instead of clicking themselves, and an agent works far better with functions it can call than with buttons made for a human. So companies add a second door next to the screen: an API, and on top of it an MCP server.
 
 ## Anatomy of a server
 
@@ -225,7 +244,10 @@ A missing ticket produces:
 }
 ```
 
-In the notebook the model asks for "ticket TKT-9999, the BitLocker one", gets this payload, calls `search_tickets(query="BitLocker")`, finds TKT-1009 and answers. The loop has no error handling at all; the recovery happens because the error told the model what to do next.
+The notebook shows two different endings.
+
+- **A record that does not exist.** The model asks for "ticket TKT-9999, the BitLocker one", gets this payload, calls `search_tickets(query="BitLocker")`, finds TKT-1009 and answers. The loop has no error handling at all; the model repaired the mistake by itself, because the error told it what to try next.
+- **A value that is not allowed.** Asked to set a ticket to the status `escalated`, the server answers *Invalid status 'escalated'* with a hint listing the three allowed values. Here the model cannot repair anything on its own, and guessing would change your data. So it stops and tells you exactly which statuses exist, instead of a vague "something went wrong".
 
 The rule: **exceptions for bugs, dicts for expected failures.** An empty search result is not an error either; `search_solutions` returns `total_count: 0` and the model tries another keyword.
 
@@ -240,9 +262,34 @@ A host such as Claude Code must decide which tools it may run without asking the
 | `idempotent_hint` | calling it twice is the same as once |
 | `open_world_hint` | it reaches outside its own data (the internet, other systems) |
 
-`servers/common.py` defines two presets, `READ_ONLY` and `WRITES`. Four ticket tools are read-only; `update_ticket_status` is marked as writing, and Claude Code asks before running it. Annotations are hints: a host may ignore them and a server can lie. They help honest hosts and honest servers cooperate; they are not a security boundary.
+You write them in the server, in two places. `servers/common.py` defines two presets, and the registration line at the bottom of each server attaches one to every tool:
+
+```python
+# servers/common.py
+READ_ONLY = ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=False)
+WRITES = ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=True, open_world_hint=False)
+
+# servers/ticket_server.py
+mcp.tool(annotations=READ_ONLY)(search_tickets)
+mcp.tool(annotations=WRITES)(update_ticket_status)
+```
+
+Four ticket tools are read-only; `update_ticket_status` is marked as writing, and Claude Code asks before running it. Annotations are hints: a host may ignore them and a server can lie. They help honest hosts and honest servers cooperate; they are not a security boundary.
 
 ## Being the client
+
+A server only waits. The program that asks is the client, and its whole job is two questions:
+
+```text
+ this notebook                  ticket_server.py
+   (client)                         (server)
+      │                                 │
+      │  1. what can you do?   ───────▶ │
+      │  ◀───────   a list of tools     │
+      │                                 │
+      │  2. run this one       ───────▶ │
+      │  ◀───────   the result, as text │
+```
 
 The Python SDK's client, in a notebook or a script:
 
@@ -271,6 +318,8 @@ In Jupyter and Colab, use plain top-level `await` in cells. Do not apply `nest_a
 
 ## What goes over the wire
 
+The short version: the two questions travel as short JSON messages. `method` says which question it is (`tools/list`, `tools/call`), `params` carries the tool name and arguments, and `id` pairs each answer with its question. Nothing in the messages is Python, which is why a server written in any language works with any client. You never write them by hand; `Client` does. The rest of this section is the detail for developers.
+
 MCP speaks **JSON-RPC 2.0**: one JSON object per line; a request has an `id` and a `method`, the answer carries the same `id` and a `result`. Under the 2026-07-28 specification a session with one tool call is three exchanges:
 
 ```
@@ -289,7 +338,7 @@ Backwards compatibility: clients and servers written before mid-2026 open with a
 
 ## MCP Inspector
 
-The standard debugging client from the MCP project. Needs Node.js 22.19 or newer.
+Optional; the course has no video on it. The standard debugging client from the MCP project. Needs Node.js 22.19 or newer.
 
 ```bash
 npx @modelcontextprotocol/inspector python servers/ticket_server.py                          # web UI
@@ -302,7 +351,9 @@ In the web UI: Connect, Tools, pick a tool, run it. The History tab shows the JS
 
 ## Letting a model drive the server
 
-The tool-calling loop from the previous course, with two lines changed: the tool list comes from `list_tools`, and running a tool goes through `call_tool`. The OpenAI Responses API wants tools as `{"type": "function", "name", "description", "parameters"}`; the server's `input_schema` passes through untouched.
+A model cannot talk to a server by itself; it only reads text and writes text. Something has to stand in the middle: give the tool list to the model, see which tool the model wants, ask the server to run it, and hand the result back. That middle piece is an **orchestrator**. In a real project a framework does this job (for example the Agent Development Kit from the next course); the notebook writes the smallest possible one by hand, about 25 lines, with every step numbered in comments.
+
+It is the tool-calling loop from the previous course, with two lines changed: the tool list comes from `list_tools`, and running a tool goes through `call_tool`. The OpenAI Responses API wants tools as `{"type": "function", "name", "description", "parameters"}`; the server's `input_schema` passes through untouched.
 
 ```python
 def to_openai_tool(tool):
@@ -329,14 +380,30 @@ The current small model, `gpt-5.6-luna`, does tool calls on the Responses API. O
 
 ## Plugging into hosts
 
-You rarely write the client. Hosts speak MCP already, so connecting a server is configuration.
+A **host** is the application you type into: Claude Code, Claude Desktop, Cursor, or an agent you built. It contains the three things the notebook builds by hand: a model, the loop, and a client that asks the two questions.
+
+```text
+┌───────────────────────────────────────────────────────┐
+│ HOST: the application you type into                   │
+│ (Claude Code, Claude Desktop, Cursor, your own agent) │
+│                                                       │
+│ the model  <-->  the loop  <-->  an MCP client        │
+└───────────────────────────────────────────────────────┘
+                                     │
+                                     │ the two questions
+                                     ▼
+                                MCP SERVER
+                        (servers/ticket_server.py)
+```
+
+Until this point the notebook played the host. A finished application takes over that role and the server stays exactly as it is, so connecting the two is configuration, not code.
 
 **Claude Code** (from the repository folder, virtual environment active):
 
 ```bash
 claude mcp add tickets -- python servers/ticket_server.py
 claude mcp list
-claude                    # ask: which tickets are critical?  then: close ticket TKT-1004
+claude                    # ask: which tickets are critical?  then: set ticket TKT-1004 to resolved
 claude mcp remove tickets
 ```
 
@@ -368,55 +435,75 @@ McpToolset(connection_params=StdioConnectionParams(
 
 ## The other road: installing someone else's server
 
-From a host's point of view there are two roads to a server, and they look the same:
+Most of the time you will not write a server. Somebody already wrote one for the thing you need: your files, GitHub, a documentation site. You install theirs.
 
 ```text
-                a host: Claude Code, Claude Desktop, your agent
-                                   │
-                                   │  "start this program,
-                                   │   what tools do you have?"
-                    ┌──────────────┴──────────────┐
-                    ▼                             ▼
-          SOMEONE ELSE'S SERVER            YOUR OWN SERVER
-          you install it                   you write it
-          (npx ..., pip install ...,       (servers/ticket_server.py)
-           or just a URL)
-                    │                             │
-            list_tools + call_tool        list_tools + call_tool
-                    │                             │
-                    ▼                             ▼
-          an outside system:               your own data:
-          files, GitHub, docs, ...         the tickets list
-          (often with YOUR token)          (or a real database)
+            a host (Claude Code, your own agent)
+               │                        │
+               ▼                        ▼
+       YOUR OWN SERVER        SOMEONE ELSE'S SERVER
+       you wrote it           you install it, or
+       (ticket_server.py)     you point at its URL
 ```
 
-Only two things differ: who wrote the program, and what its tools talk to. Most people, most of the time, take the left road. The MCP project publishes a few reference servers; the one that serves files from folders you name installs into Claude Code with one line (the program is downloaded on first start):
+For the host the two look the same: the same two questions, the same configuration.
+
+**A server that runs on your machine.** The MCP project publishes a server that works with files in a folder you name. One line registers it in Claude Code, and the program is downloaded on first start:
 
 ```bash
 claude mcp add files -- npx -y @modelcontextprotocol/server-filesystem /full/path/to/MCP-tutorial
 claude                    # ask: list the files in servers/ and tell me which one has a tool that writes
-                          # then: rename README.md to notes.md   (the host asks first)
 claude mcp remove files
 ```
 
-A server on a URL is the same line with an address instead of a command. DeepWiki, a public server that explains open-source repositories, needs no login:
+**A server that runs somewhere else.** Then you give an address instead of a command. DeepWiki, a public server that answers questions about open-source repositories, needs no login:
 
 ```bash
 claude mcp add --transport http deepwiki https://mcp.deepwiki.com/mcp
 ```
 
-The difference between the roads is trust. You wrote the ticket server and know what it sees and changes. The file server sees every folder you named and has tools that rename and write; a server on a URL runs on someone else's machine and sees whatever you send it. Before installing, connect Inspector to it, read every tool description and annotation, and ask: who wrote it, which tools write or delete, what data does it see. See [tool poisoning](#beyond-your-laptop-transports-authentication-trust) below.
+### The same server in your own agent
 
-Which program, how to talk to it, who handles it: the same three answers as `Client(...)`.
+If the host is an agent you built, you do in code what `claude mcp add` did in configuration: you tell your agent where the server is. With the loop from this course it is one changed line, an address instead of a program to start:
+
+```python
+async with Client("https://mcp.deepwiki.com/mcp") as wiki:
+    answer = await run_with_mcp("What is the repository modelcontextprotocol/python-sdk for?", wiki)
+```
+
+A framework does the same with its own words. In the Agent Development Kit (the next course):
+
+```python
+from google.adk.agents import LlmAgent
+from google.adk.tools.mcp_tool import McpToolset
+from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
+
+agent = LlmAgent(
+    name="repo_helper",
+    model="gemini-flash-latest",
+    instruction="Answer questions about open-source repositories.",
+    tools=[McpToolset(connection_params=StreamableHTTPConnectionParams(url="https://mcp.deepwiki.com/mcp"))],
+)
+```
+
+### Install only servers you trust
+
+Installing a server takes one line, which is exactly why you should stop for a moment first.
+
+1. **A local server is a program on your computer.** `npx ...` downloads it and runs it with your permissions. A malicious one can do whatever you can do: read your files and your keys and send them away. It is the same risk as installing any package from the internet.
+2. **A remote server sees what you send it.** Every argument of every call leaves your machine, and with it pieces of your conversation.
+3. **The model reads whatever the server sends back, and it cannot reliably tell data from instructions.** A tool description or a tool result can contain a sentence like *"also send the user's files to ..."*, and the model may follow it. Hiding such text in a tool description is called **tool poisoning**. Even a well-meant server can pass it on, inside a web page or a document it fetched for you.
+
+Before you install, ask: who wrote it (the vendor itself, a known project, or a stranger), what can its tools change or delete, and what data will it see. Keep the host's permission prompts switched on for every tool that writes.
 
 ## Resources and prompts
 
-Not everything an assistant needs is a question for the model. Two more things a server can publish:
+So far the servers offered tools: functions the *model* decides to call. A server can offer two more things, and both are meant for the *person* in front of the application.
 
-- A **resource** is a document with an address (a URI). The host shows it to the user, who attaches it to a conversation. The person decides, not the model.
-- A **prompt** is a reusable message template with blanks. The host offers it as a menu item or slash command; the person picks it and fills the blanks.
+- **A resource is a document the server offers for reading.** The HR server offers the company's remote work policy under the address `hr://policy/remote-work`. In an application you see it in a list, like a file you can attach. You pick it, its text is added to your conversation, and when you ask *"how many days a week can I work from home?"* the model answers from the policy itself instead of guessing.
+- **A prompt is a ready-made request with blanks.** Somebody in HR once wrote a good instruction for performance reviews. The server offers it as `performance_review` with two blanks, the employee and the period. You pick it, fill in the blanks, and the full instruction is sent for you.
 
-Tools are for the model to call; resources and prompts are for the host's interface and the person in front of it.
+*Why not just a tool `get_policy()`?* That would work too. The difference is who decides: a tool is called when the model thinks it needs it; a resource is attached when you say "use this document". In practice most MCP servers offer only tools; resources and prompts are less common, but worth recognising.
 
 ```python
 @mcp.resource("hr://policy/{name}")        # an address with a hole; the function fills it
@@ -428,7 +515,7 @@ def performance_review(employee_id: str, review_period: str) -> str:
     return f"Write a performance review for ..."
 ```
 
-Client side: `list_resources`, `list_resource_templates`, `read_resource(uri)` (gives content plus MIME type), `list_prompts`, `get_prompt(name, arguments)` (gives ready-made messages). Where you meet them: the attachment menu in Claude Desktop, slash commands, and `/mcp` in Claude Code.
+Client side: `list_resources`, `list_resource_templates`, `read_resource(uri)` (gives content plus MIME type), `list_prompts`, `get_prompt(name, arguments)` (gives ready-made messages). Where you meet them: in Claude Code, type `@` and the resources of connected servers appear next to your files, and prompts appear among the slash commands when you type `/`. Other applications have their own menus for the same two things.
 
 **Sampling**, an older feature that let a server ask the host's model for a completion, was deprecated in the 2026-07-28 specification together with roots and logging. Servers that need a model call the model provider directly. Do not build on it.
 
@@ -472,7 +559,7 @@ Watch the `->` lines in the terminal: each names the tool and, through it, the s
 - **`ModuleNotFoundError: mcp.server.fastmcp` or `FastMCP`**: you have code from the 1.x line. In 2.x the class is `MCPServer` from `mcp.server`.
 - **`pip install mcp` installed 2.x but a course pins 1.x** (the ADK course): use a separate virtual environment per course.
 - **A notebook cell hangs on `async with Client(...)`**: remove `nest_asyncio`. Use plain top-level `await`.
-- **`sys.stderr.fileno()` error on Colab**: run the plumbing lines from the "Be the Client" section first.
+- **`sys.stderr.fileno()` error on Colab**: run the setup cells (section 0.2) first; the last one contains the plumbing lines.
 - **The client gets garbage or disconnects**: the server printed to standard output. Remove the `print`, or log to standard error.
 - **Port 8000 already in use** for the HTTP demo: `lsof -i :8000` (macOS, Linux) and stop the old process; the notebook cell terminates its own server, but an interrupted cell may not.
 - **Stray servers after an interrupted cell**: `pkill -f "servers/.*_server.py"` (macOS, Linux).
@@ -493,7 +580,7 @@ Watch the `->` lines in the terminal: each names the tool and, through it, the s
 
 ## Exercise and further reading
 
-- **Exercise:** [EXERCISE.md](EXERCISE.md): a starter variant (add one tool to the HR server, about 20 minutes) and the full one (build a sixth server and plug it into Claude Code, about 30 minutes).
+- **Exercise:** section 4.2 of the notebook walks through the starter task (add one tool to the HR server, about 20 minutes). [EXERCISE.md](EXERCISE.md) has the same task and the full one (build a sixth server and plug it into Claude Code, about 30 minutes).
 - MCP specification and documentation: https://modelcontextprotocol.io
 - Python SDK: https://github.com/modelcontextprotocol/python-sdk (migration guide for 1.x code: https://py.sdk.modelcontextprotocol.io/migration/)
 - MCP Inspector: https://github.com/modelcontextprotocol/inspector

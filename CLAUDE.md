@@ -5,9 +5,17 @@
 > public student repo.
 
 A short Python course on the Model Context Protocol. **One notebook is the course**:
-`MCP_course.ipynb`, scrolled top to bottom in class (Colab; Robert speaks Slovak over English
-material). Its H1 sections are the in-class flow and, later, the video units. The README is the
-take-home textbook version of the same material; keep the two in step.
+`MCP_course.ipynb`, scrolled top to bottom (Colab; Robert speaks Slovak over English
+material). The README is the take-home textbook version of the same material; keep the two in
+step.
+
+**Heading contract (since 2026-11-18): the notebook follows the videos.** `# K. Title` = chapter
+(0 to 4), `## K.V Title` = exactly one video, and `K.V` is the lecture code `K_V` in the Skillmea
+overview tab "MCP". `###` = rituals and sub-parts inside a video. Sections without a video are
+unnumbered `## Optional: …` (Inspector, Beyond your laptop). Developer corners are unnumbered
+`## 🛠️ Developer corner: …` and are not filmed. Renaming, adding or moving a numbered section
+means updating the Skillmea tab and the chapter table at the top of the README in the same go.
+Cross-references in the text use section numbers ("section 2.2"), never "the previous chapter".
 
 **Two paths in one notebook (since 2026-09-13).** The audience is mixed (IT/PO colleagues with
 basic Python next to developers). Everything visible by default is the *everyone path*: README
@@ -51,15 +59,22 @@ requirements.txt        mcp==2.2.0, openai==3.13.0 (pins must match the notebook
   em-dashes, no LLMish vocabulary.
 - **No `nest_asyncio` anywhere.** The 2.x `Client` runs with plain top-level `await` in Jupyter
   and Colab; with nest_asyncio it hangs. Colab needs the `sys.stderr.fileno()` swap before the
-  first subprocess (in the "Be the Client" cell).
+  first subprocess (it lives in the third setup cell, section 0.2).
+- **GUI tools stay optional.** Robert does not film Inspector; checks in mini-tasks and the
+  exercise go through a client cell, with Inspector mentioned as an alternative at most.
+- **One cell needs the internet**: the DeepWiki cell in 3.2 (`Client("https://mcp.deepwiki.com/mcp")`),
+  wrapped in try/except so Run all survives an outage. After a re-execute, check that its
+  output shows the three tools and an answer, not the fallback line.
 - **Logging**: set `httpx`, `httpx2` (the SDK's vendored copy) and `openai` loggers to WARNING
   in the key cell, or every HTTP request lands in cell outputs.
 - **ADK bridge is shown, not run**: ADK pins `mcp<2`; a 2.x server works with its 1.x client
   (verified 2026-09-12), but the two cannot share one environment.
-- The notebook is built by a builder script (nbformat) that copies unchanged code cells from the
-  previous notebook by cell id and defines all markdown explicitly; the 2026-09-13 builder is
-  `training-ops/filming/mcp/build_mcp_course.py`. When editing by hand, keep cell order = section
-  order, keep corner headings in `colab.collapsed_sections`, and re-execute.
+- **How the notebook is edited.** The notebook file is the source. Larger restructures go
+  through a one-off nbformat script that addresses cells by id, validates every anchor before
+  writing and refuses to run twice (latest: `training-ops/filming/mcp/restructure_2026_11.py`).
+  The 2026-09-13 builder `training-ops/filming/mcp/build_mcp_course.py` is STALE (it predates the
+  2026-09-27 and 2026-11-18 restructures); running it would undo both. After any edit: keep
+  cell order = section order, keep corner headings in `colab.collapsed_sections`, re-execute.
 
 ## Running and verifying
 
@@ -69,13 +84,16 @@ pip install -r requirements.txt jupyter nbconvert ipykernel
 export OPENAI_API_KEY=...            # your own key
 jupyter nbconvert --to notebook --execute --inplace MCP_course.ipynb --ExecutePreprocessor.timeout=300
 pgrep -fl "servers/.*_server.py"     # must be empty afterwards (no stray servers)
-# skip-safety: strip every corner (cells from a collapsed_sections heading to the next H1/H2) into a
-# copy inside the repo folder, execute it, expect zero errors (13 code cells on the everyone path)
+# skip-safety: strip every corner (cells from a collapsed_sections heading to the next H1/H2), execute
+# the copy with nbclient and cwd = this folder, expect zero errors (16 code cells on the everyone path,
+# 22 in total). Keep the copy OUTSIDE the repo: drive-push uploads everything in this folder.
 printf 'Which customers have both open tickets and overdue invoices?\nexit\n' | python client/interactive_client.py
 ```
 
 After a run, read the outputs against the prose (dump code cells to text); the TKT-9999
-recovery demo should show three rounds (details → error → search → details). Colab check by
+recovery demo should show three rounds (details → error → search → details), and the
+"escalated" demo in 2.2 should show the invalid-status error followed by an answer that names
+the three allowed statuses. Colab check by
 Robert: badge, Run all, terminal for the interactive client.
 
 ## Drive sync

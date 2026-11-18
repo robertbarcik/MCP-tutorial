@@ -12,9 +12,27 @@ If you are not a developer, or short on time, do this one instead. The skill it 
 2. Below it, add `list_department(department: str) -> dict`. It returns the employees of one department (name and role are enough). When no employee matches, return `make_error(...)` with a hint that lists the known departments.
 3. Write the docstring for the model: one line saying what the tool does, an `Args:` section, an example value (`Engineering`).
 4. Register it with the same line as its neighbour: `@mcp.tool(annotations=READ_ONLY)`.
-5. Check it in Inspector: `npx @modelcontextprotocol/inspector python servers/hr_server.py`. Does the tool appear? Call it with a department that does not exist and read your own error hint. Would a model know what to do next?
+5. Check it as a client, in a new notebook cell (run the cell that defines `HR_SERVER` in section 4.1 first). The tool should appear with your description, and a department that does not exist should give back your own error:
 
-An LLM can write the Python for you; the description and the error are yours.
+   ```python
+   async with Client(HR_SERVER) as hr:
+       for tool in (await hr.list_tools()).tools:
+           print(tool.name, "-", tool.description.strip().splitlines()[0])
+       result = await hr.call_tool("list_department", {"department": "Marketing"})
+       print(result.content[0].text)
+   ```
+
+6. Let the model use it:
+
+   ```python
+   async with Client(HR_SERVER) as hr:
+       print(await run_with_mcp("Who works in Engineering?", hr))
+       print(await run_with_mcp("Who works in Marketing?", hr))
+   ```
+
+You are done when the model answers the first question after one tool call, and for the second it tells you which departments exist. It can only know that from your hint. If its answer is vague, rewrite your error, not the model.
+
+An LLM can write the Python for you; the description and the error are yours. (If you prefer a tool with buttons, MCP Inspector does the same check: `npx @modelcontextprotocol/inspector python servers/hr_server.py`.)
 
 ## What you will build
 
@@ -69,7 +87,7 @@ Anything you like. Some starting points:
 - Every parameter has a type hint; optional ones have a default
 - One tool returns a `make_error(...)` dict for an unknown ID, with `suggested_actions` and `follow_up_tools`
 - Every tool carries an annotation
-- Inspector can call at least one tool
+- A client cell (or Inspector) can call at least one tool
 
 The error path should look like this:
 
