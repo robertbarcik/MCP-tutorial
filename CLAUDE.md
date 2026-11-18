@@ -93,8 +93,16 @@ printf 'Which customers have both open tickets and overdue invoices?\nexit\n' | 
 After a run, read the outputs against the prose (dump code cells to text); the TKT-9999
 recovery demo should show three rounds (details → error → search → details), and the
 "escalated" demo in 2.2 should show the invalid-status error followed by an answer that names
-the three allowed statuses. Colab check by
-Robert: badge, Run all, terminal for the interactive client.
+the three allowed statuses.
+
+**Colab check** (do it after any change to the setup cells; a local run cannot see these):
+Claude can run it through Chrome when Robert is signed in to Google there and has the Colab
+secret `OPENAI_API_KEY` (ask him; never type a key). Open the notebook by commit hash
+(`.../blob/<sha>/MCP_course.ipynb`; `main` is cached for a few minutes), Run all, and test the
+FIRST-RUN path: secret access switched off for the notebook, then wait ~15 s before clicking
+"Grant access". On 2026-11-18 that path failed twice (`userdata.get` raises `TimeoutException`
+after a few seconds; the fallback `getpass()` then swallowed the dialog's late reply, a dict)
+before the key cell got its retry loop. Robert still checks the terminal chat himself.
 
 ## Drive sync
 

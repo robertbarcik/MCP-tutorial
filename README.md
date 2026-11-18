@@ -566,6 +566,8 @@ Watch the `->` lines in the terminal: each names the tool and, through it, the s
 - **The wiretap cell fails on Windows**: it needs `sh` and `tee`. Run that cell in Colab, or inside Git Bash / WSL.
 - **Inspector fails to start**: check `node --version` (needs 22.19 or newer).
 - **`APIConnectionError: Connection error` wrapped in an `ExceptionGroup`, with `Illegal header value b'Bearer sk-...\r\n'` deeper in the trace**: the API key has a trailing newline (a Colab secret pasted with Enter). The key cell strips it since 2026-09-27; in older copies use `OpenAI(api_key=api_key.strip())`. Tracebacks on Colab are hidden by the stderr redirect; print them with `traceback.print_exception(e, file=sys.stdout)`.
+- **Colab: `AttributeError: 'dict' object has no attribute 'strip'` in the key cell**: an older copy of the notebook. When the "Grant access" dialog for the secret was clicked after a few seconds, Colab had already stopped waiting and the cell took the dialog's late answer for a typed key. Fixed on 2026-11-18 (the cell asks again); in an older copy simply run the cell a second time.
+- **Colab shows the "Grant access" dialog twice**: expected when the first click took a few seconds. Click it again.
 - **The model gives up on TKT-9999 instead of searching**: models are not deterministic; run the cell again.
 - **`Function tools with reasoning_effort are not supported ... in /v1/chat/completions`**: the current models do tool calls on the Responses API. Use `client.responses.create`, as this course does.
 
