@@ -9,7 +9,7 @@ The course is one notebook, **`MCP_course.ipynb`**, read top to bottom. Its chap
 | 0. Welcome | 0.1 What MCP is and where it sits · 0.2 Materials and setup · 0.3 When to use MCP, when not, and our help-desk story |
 | 1. A Server and a Client | 1.1 Result first: five servers, one chat · 1.2 The thing underneath: plain functions · 1.3 Anatomy of a server · 1.4 Be the client · *Optional: MCP Inspector* |
 | 2. Let a Model Drive It | 2.1 A tiny orchestrator: the loop · 2.2 Errors written for the model · 2.3 Annotations |
-| 3. Plug Into a Real Application | 3.1 Our server in a real host · 3.2 Someone else's server |
+| 3. Plug Into a Real Application | 3.1 Servers in a real application: ours and someone else's |
 | 4. What Else, and Your Turn | 4.1 Resources and prompts · *Optional: Beyond your laptop* · 4.2 Your turn |
 
 This README is the textbook version of it: the same material, written to be re-read later.
@@ -462,7 +462,34 @@ claude mcp remove tickets
 
 The second question triggers a permission prompt: the host saw the `WRITES` annotation. `/mcp` inside a session lists connected servers, their tools, prompts and resources.
 
-This repository ships a **`.mcp.json`** that Claude Code reads when you open the folder (project scope; it asks once whether to trust it):
+The `claude mcp add` line starts nothing. It only saves a note: a name and the command that starts the server. The work happens each time you start Claude Code in this folder:
+
+```text
+you type: claude
+   │
+   ├─ 1. Claude Code reads its notes about servers
+   ├─ 2. it starts each one itself:
+   │        python servers/ticket_server.py
+   ├─ 3. its client asks each one: what can you do?
+   └─ 4. the tool list goes into the context window
+
+you quit Claude Code  ->  it stops those servers again
+```
+
+So the server does not run all day; it lives as long as the session. `python` must be the one that has the `mcp` package, hence the active virtual environment.
+
+**Where is the note saved?** There are two places, and the difference is who gets it. A plain `claude mcp add` saves it in Claude Code's own settings on your computer: only you have it, and only for this folder. The same note can also live in a file called `.mcp.json` inside the project folder (`claude mcp add --scope project` writes there). Then it travels with the folder, and everybody who downloads the folder gets the servers.
+
+```text
+MCP-tutorial/               the folder you downloaded
+├── MCP_course.ipynb
+├── servers/
+│   ├── ticket_server.py
+│   └── ...
+└── .mcp.json               "these servers belong here"
+```
+
+This repository ships such a file, so you do not have to type six commands: open the folder, type `claude`, and Claude Code finds it (it asks once whether to trust it). A team works the same way: the file sits next to the code.
 
 ```json
 {
@@ -488,18 +515,24 @@ McpToolset(connection_params=StdioConnectionParams(
 
 ## The other road: installing someone else's server
 
-Most of the time you will not write a server. Somebody already wrote one for the thing you need: your files, GitHub, a documentation site. You install theirs.
+Most of the time you will not write a server. Somebody already wrote one for the thing you need: your files, GitHub, a documentation site. You use theirs. There are two kinds, and the difference is where the server runs.
 
 ```text
-            a host (Claude Code, your own agent)
-               │                        │
-               ▼                        ▼
-       YOUR OWN SERVER        SOMEONE ELSE'S SERVER
-       you wrote it           you install it, or
-       (ticket_server.py)     you point at its URL
+        YOUR COMPUTER             │   THEIR COMPUTER
+                                  │
+ host ──► ticket_server.py        │
+          ours, runs here         │
+                                  │
+ host ──► filesystem server       │
+          theirs, downloaded,     │
+          runs here               │
+                                  │
+ host ──────── internet ──────────┼──► DeepWiki server
+          theirs, nothing         │    runs there
+          downloaded              │
 ```
 
-For the host the two look the same: the same two questions, the same configuration.
+For the host all three look the same: the same two questions, the same kind of note.
 
 **A server that runs on your machine.** The MCP project publishes a server that works with files in a folder you name. One line registers it in Claude Code, and the program is downloaded on first start:
 
@@ -514,6 +547,13 @@ claude mcp remove files
 ```bash
 claude mcp add --transport http deepwiki https://mcp.deepwiki.com/mcp
 ```
+
+**What travels to a remote server?** The same two questions; only the road is different. With a local server the messages go between two programs on your computer and nothing travels over the network. With a remote server the very same messages go over the internet.
+
+- On your computer lies one note with the address, and a login if the server wants one. None of their code: the tool runs on their machine.
+- What leaves your computer are the arguments of every call. The model writes them, so pieces of your conversation can be inside. The whole conversation and your files do not go there.
+- What comes back is the tool list and the results, as text that lands in the context window.
+- A remote server can be slow or switched off. Then `/mcp` shows it as failed, and your other servers keep working.
 
 ### The same server in your own agent
 

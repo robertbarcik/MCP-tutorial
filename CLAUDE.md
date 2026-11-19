@@ -62,7 +62,7 @@ requirements.txt        mcp==2.2.0, openai==3.13.0 (pins must match the notebook
   first subprocess (it lives in the third setup cell, section 0.2).
 - **GUI tools stay optional.** Robert does not film Inspector; checks in mini-tasks and the
   exercise go through a client cell, with Inspector mentioned as an alternative at most.
-- **One cell needs the internet**: the DeepWiki cell in 3.2 (`Client("https://mcp.deepwiki.com/mcp")`),
+- **One cell needs the internet**: the DeepWiki cell in 3.1 (`Client("https://mcp.deepwiki.com/mcp")`),
   wrapped in try/except so Run all survives an outage. After a re-execute, check that its
   output shows the three tools and an answer, not the fallback line.
 - **Logging**: set `httpx`, `httpx2` (the SDK's vendored copy) and `openai` loggers to WARNING
@@ -77,8 +77,11 @@ requirements.txt        mcp==2.2.0, openai==3.13.0 (pins must match the notebook
   Vocabulary in 1.4: "the application" = the model + "ordinary software" that contains the client.
   The client is never "software plus model"; "host" is introduced only in 3.1, "harness" is not used.
   Word map (bridged in the text by `terms_bridge_2026_11_19.py`): application (1.4) = host (3.1);
-  ordinary software (1.4) = orchestrator / the loop (2.1) + the client; agent (3.2) = a model with a
+  ordinary software (1.4) = orchestrator / the loop (2.1) + the client; agent (3.1) = a model with a
   loop around it; "Claude Code is a client" in 0.1 and 0.3 is the everyday shortcut, named as such in 1.4.
+  Chapter 3 is ONE video since 2026-11-19 (`merge_3_1_3_2_2026_11_19.py`, markdown only): section 3.1
+  covers our server and someone else's. Its plain-words claims were checked against `claude mcp add --help`
+  (default scope `local`, `--scope project` writes `.mcp.json`); the text calls a registration "a note".
   The 2026-09-13 builder `training-ops/filming/mcp/build_mcp_course.py` is STALE (it predates the
   2026-09-27 and 2026-11-18 restructures); running it would undo both. After any edit: keep
   cell order = section order, keep corner headings in `colab.collapsed_sections`, re-execute.
