@@ -103,6 +103,16 @@ FIRST-RUN path: secret access switched off for the notebook, then wait ~15 s bef
 "Grant access". On 2026-11-18 that path failed twice (`userdata.get` raises `TimeoutException`
 after a few seconds; the fallback `getpass()` then swallowed the dialog's late reply, a dict)
 before the key cell got its retry loop. Robert still checks the terminal chat himself.
+Since 2026-11-19 the key cell asks for the secret 12 times (`userdata.get` waits 10 s per dialog,
+so about two minutes; every attempt stacks one more dialog), re-reads the secret when a late
+"Grant access" click lands in the typed-key prompt, and ends with one tiny test request, so a key
+that OpenAI rejects fails there with a readable `RuntimeError`. Without that, the failure only
+showed in 2.1 as `ExceptionGroup: unhandled errors in a TaskGroup` (the client block wraps
+whatever the OpenAI call raises). Verified in Colab: happy path. NOT yet verified in Colab: a
+click later than two minutes (the re-read path), and the opened notebook stays granted per
+Google account, so switch access off in the Secrets panel to see the dialog at all.
+A Colab "Save to Drive" by Robert shows up in drive-push as `CONFLICT drive-newer`; compare
+sources cell by cell before deciding (on 2026-11-19 only outputs differed).
 
 ## Drive sync
 
