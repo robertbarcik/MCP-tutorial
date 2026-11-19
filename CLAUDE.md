@@ -71,7 +71,14 @@ requirements.txt        mcp==2.2.0, openai==3.13.0 (pins must match the notebook
   (verified 2026-09-12), but the two cannot share one environment.
 - **How the notebook is edited.** The notebook file is the source. Larger restructures go
   through a one-off nbformat script that addresses cells by id, validates every anchor before
-  writing and refuses to run twice (latest: `training-ops/filming/mcp/restructure_2026_11.py`).
+  writing and refuses to run twice (latest, both 2026-11-19: `training-ops/filming/mcp/merge_1_4_1_5_2026_11_19.py`
+  merged videos 1_4 and 1_5 into section 1.4 and added the context-window picture, then
+  `highlevel_1_4_2026_11_19.py` put the who-is-who picture on top; before them `restructure_2026_11.py`).
+  Vocabulary in 1.4: "the application" = the model + "ordinary software" that contains the client.
+  The client is never "software plus model"; "host" is introduced only in 3.1, "harness" is not used.
+  Word map (bridged in the text by `terms_bridge_2026_11_19.py`): application (1.4) = host (3.1);
+  ordinary software (1.4) = orchestrator / the loop (2.1) + the client; agent (3.2) = a model with a
+  loop around it; "Claude Code is a client" in 0.1 and 0.3 is the everyday shortcut, named as such in 1.4.
   The 2026-09-13 builder `training-ops/filming/mcp/build_mcp_course.py` is STALE (it predates the
   2026-09-27 and 2026-11-18 restructures); running it would undo both. After any edit: keep
   cell order = section order, keep corner headings in `colab.collapsed_sections`, re-execute.

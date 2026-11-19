@@ -7,7 +7,7 @@ The course is one notebook, **`MCP_course.ipynb`**, read top to bottom. Its chap
 | Chapter | Sections (one video each) |
 |---|---|
 | 0. Welcome | 0.1 What MCP is and where it sits · 0.2 Materials and setup · 0.3 When to use MCP, when not, and our help-desk story |
-| 1. A Server and a Client | 1.1 Result first: five servers, one chat · 1.2 The thing underneath: plain functions · 1.3 Anatomy of a server · 1.4 Be the client · 1.5 What travels between the two programs · *Optional: MCP Inspector* |
+| 1. A Server and a Client | 1.1 Result first: five servers, one chat · 1.2 The thing underneath: plain functions · 1.3 Anatomy of a server · 1.4 Be the client · *Optional: MCP Inspector* |
 | 2. Let a Model Drive It | 2.1 A tiny orchestrator: the loop · 2.2 Errors written for the model · 2.3 Annotations |
 | 3. Plug Into a Real Application | 3.1 Our server in a real host · 3.2 Someone else's server |
 | 4. What Else, and Your Turn | 4.1 Resources and prompts · *Optional: Beyond your laptop* · 4.2 Your turn |
@@ -278,7 +278,60 @@ Four ticket tools are read-only; `update_ticket_status` is marked as writing, an
 
 ## Being the client
 
-A server only waits. The program that asks is the client, and its whole job is two questions:
+Who is who when you chat with a model that uses tools? The application you type into has two parts. The **model** reads text and writes text, nothing else. Around it sits **ordinary software** with no intelligence: it has a list of servers that a person wrote down, it prepares the text the model reads, and one piece of it, the **client**, talks to the servers. The model never talks to a server; only the client does. (Everyday speech calls all of Claude Code "a client", and the start of this text did too. Looking inside, the client is one piece of it.)
+
+```text
+┌────────────────────────────────────────────────────────┐
+│ THE APPLICATION you type into                          │
+│                                                        │
+│ ┌─────────────────┐      ┌───────────────────────────┐ │
+│ │ THE MODEL       │      │ ORDINARY SOFTWARE         │ │
+│ │                 │ ◀──▶ │                           │ │
+│ │ reads text,     │      │ - has a list of servers   │ │
+│ │ writes text     │      │ - prepares what the model │ │
+│ │                 │      │   reads                   │ │
+│ └─────────────────┘      │ - the CLIENT              │ │
+│                          └─────────────┬─────────────┘ │
+└────────────────────────────────────────┼───────────────┘
+                                         │ two questions
+                                         ▼
+                        MCP SERVERS (tickets, billing, ...)
+```
+
+How does a model then know that a server and its tools exist at all? A model can only read text, and all the text it has in front of it at one moment is its **context window**. In the chat over five servers, before you type anything, that window holds this:
+
+```text
+┌────────────────────────────────────────────────────────┐
+│ INSTRUCTIONS                                           │
+│   You are an IT help-desk assistant. Use the tools     │
+│   to look things up; never invent data. ...            │
+├────────────────────────────────────────────────────────┤
+│ TOOLS YOU CAN CALL                                     │
+│                                                        │
+│   search_tickets                                       │
+│     Search support tickets by any combination of       │
+│     filters. All filters are optional; ...             │
+│     arguments: query, ticket_id, customer_id,          │
+│                status, priority, ...                   │
+│                                                        │
+│   get_invoice                                          │
+│     One invoice by ID, or all invoices of a customer.  │
+│     arguments: invoice_id, customer_id                 │
+│                                                        │
+│   ... and 19 more: name, description, arguments        │
+├────────────────────────────────────────────────────────┤
+│ THE CONVERSATION                                       │
+│   (empty: you have not asked anything yet)             │
+└────────────────────────────────────────────────────────┘
+```
+
+The tool descriptions are simply written there, as text, below the instructions. Your question lands in the same window. The exact layout differs between applications; the content does not.
+
+The model did not fetch that list. A model cannot ask a server anything. The application did it before your first question: it has a list of servers written by a person (one line in `client/interactive_client.py`, a configuration file in Claude Code), it starts each of them, asks what it can do, and copies the answers into the context window with every question. The list is about **tools, not servers**: name, description and arguments for each tool, all servers in one flat list. Which server owns which tool is the application's bookkeeping; some applications put the server into the tool name (in Claude Code, `mcp__tickets__search_tickets`). A server may also send a few sentences of instructions about itself, which the application places next to the tools; the servers here send none.
+
+When you ask, your question goes into the same window. The model answers in words or writes a request to call a tool. It cannot run anything itself: the software reads the request, its client passes it on to the server that owns the tool, the tool runs in the server, and the result comes back as text into the context window, where the model reads it and answers. The section "Letting a model drive the server" builds this loop.
+
+The part of the application that asks the servers is the **client**. A server only waits; the client is the program that asks, and its whole job is two questions:
 
 ```text
  this notebook                  ticket_server.py
@@ -351,7 +404,7 @@ In the web UI: Connect, Tools, pick a tool, run it. The History tab shows the JS
 
 ## Letting a model drive the server
 
-A model cannot talk to a server by itself; it only reads text and writes text. Something has to stand in the middle: give the tool list to the model, see which tool the model wants, ask the server to run it, and hand the result back. That middle piece is an **orchestrator**. In a real project a framework does this job (for example the Agent Development Kit from the next course); the notebook writes the smallest possible one by hand, about 25 lines, with every step numbered in comments.
+A model cannot talk to a server by itself; it only reads text and writes text. Something has to stand in the middle: give the tool list to the model, see which tool the model wants, ask the server to run it, and hand the result back. That middle piece is an **orchestrator**. Together with the client it is the ordinary software from the picture in "Being the client". In a real project a framework does this job (for example the Agent Development Kit from the next course); the notebook writes the smallest possible one by hand, about 25 lines, with every step numbered in comments.
 
 It is the tool-calling loop from the previous course, with two lines changed: the tool list comes from `list_tools`, and running a tool goes through `call_tool`. The OpenAI Responses API wants tools as `{"type": "function", "name", "description", "parameters"}`; the server's `input_schema` passes through untouched.
 
@@ -380,7 +433,7 @@ The current small model, `gpt-5.6-luna`, does tool calls on the Responses API. O
 
 ## Plugging into hosts
 
-A **host** is the application you type into: Claude Code, Claude Desktop, Cursor, or an agent you built. It contains the three things the notebook builds by hand: a model, the loop, and a client that asks the two questions.
+A **host** is the application you type into: Claude Code, Claude Desktop, Cursor, or an agent you built. It contains the three things the notebook builds by hand: a model, the loop, and a client that asks the two questions. It is the application from the picture in "Being the client"; the loop plus the client is what that picture calls ordinary software.
 
 ```text
 ┌───────────────────────────────────────────────────────┐
